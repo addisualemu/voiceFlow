@@ -1,9 +1,10 @@
+
 "use client"
 
 import { formatDistanceToNow } from 'date-fns';
-import { MoreVertical, BookText, CheckSquare, Trash2, GitBranch, XCircle, ListTodo } from 'lucide-react';
-import type { Note, NoteCategory, TaskStatus } from "@/lib/types";
-import { TASK_STATUSES, TASK_STATUS_LABELS } from '@/lib/types';
+import { MoreVertical, Trash2, Edit } from 'lucide-react';
+import type { Task, Stage } from "@/lib/types";
+import { STAGES, STAGE_LABELS } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
@@ -20,40 +21,26 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-interface NoteCardProps {
-  note: Note;
-  onUpdate: (id: string, updates: Partial<Note>) => void;
+interface TaskCardProps {
+  task: Task;
+  onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
 }
 
-const statusIcons: Record<TaskStatus, React.ReactNode> = {
-    todo: <ListTodo className="h-4 w-4 mr-2" />,
-    need_tobe_braken_down: <GitBranch className="h-4 w-4 mr-2" />,
-    blocked: <XCircle className="h-4 w-4 mr-2" />,
-}
+export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
 
-export default function NoteCard({ note, onUpdate, onDelete }: NoteCardProps) {
-
-  const handleCategoryChange = (category: NoteCategory) => {
-    const updates: Partial<Note> = { category };
-    if (category === 'task' && !note.taskStatus) {
-      updates.taskStatus = 'todo';
-    }
-    onUpdate(note.id, updates);
-  };
-
-  const handleStatusChange = (status: TaskStatus) => {
-    onUpdate(note.id, { taskStatus: status });
+  const handleStageChange = (stage: Stage) => {
+    onUpdate(task.id, { stage });
   };
   
   return (
     <Card className="w-full transition-all hover:shadow-md">
       <CardHeader>
         <div className="flex justify-between items-start">
-            <div>
-                <CardTitle className="text-lg">{note.title}</CardTitle>
+            <div className="space-y-1">
+                <CardTitle className="text-lg">{task.detail.split('\n')[0]}</CardTitle>
                 <CardDescription>
-                    {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
                 </CardDescription>
             </div>
           
@@ -67,27 +54,26 @@ export default function NoteCard({ note, onUpdate, onDelete }: NoteCardProps) {
                     <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleCategoryChange(note.category === 'task' ? 'memo' : 'task')}>
-                        {note.category === 'task' ? <BookText className="mr-2 h-4 w-4" /> : <CheckSquare className="mr-2 h-4 w-4" />}
-                        Move to {note.category === 'task' ? 'Memos' : 'Tasks'}
+                    <DropdownMenuItem>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
                     </DropdownMenuItem>
-                    {note.category === 'task' && (
-                        <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>Change Status</DropdownMenuSubTrigger>
-                        <DropdownMenuPortal>
-                            <DropdownMenuSubContent>
-                            <DropdownMenuLabel>Task Status</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {TASK_STATUSES.map(status => (
-                                <DropdownMenuItem key={status} onClick={() => handleStatusChange(status)}>
-                                {statusIcons[status]}
-                                {TASK_STATUS_LABELS[status]}
-                                </DropdownMenuItem>
-                            ))}
-                            </DropdownMenuSubContent>
-                        </DropdownMenuPortal>
-                        </DropdownMenuSub>
-                    )}
+
+                    <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>Change Stage</DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                        <DropdownMenuSubContent>
+                        <DropdownMenuLabel>Move to</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {STAGES.map(stage => (
+                            <DropdownMenuItem key={stage} onClick={() => handleStageChange(stage)}>
+                            {STAGE_LABELS[stage]}
+                            </DropdownMenuItem>
+                        ))}
+                        </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                    </DropdownMenuSub>
+
                     <DropdownMenuSeparator />
                     <AlertDialogTrigger asChild>
                       <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
@@ -100,12 +86,12 @@ export default function NoteCard({ note, onUpdate, onDelete }: NoteCardProps) {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete your note.
+                        This action cannot be undone. This will permanently delete your task.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => onDelete(note.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      <AlertDialogAction onClick={() => onDelete(task.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                         Delete
                       </AlertDialogAction>
                     </AlertDialogFooter>
@@ -114,16 +100,11 @@ export default function NoteCard({ note, onUpdate, onDelete }: NoteCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-foreground whitespace-pre-wrap">{note.content}</p>
+        <p className="text-sm text-foreground whitespace-pre-wrap">{task.detail}</p>
       </CardContent>
-      {note.category === 'task' && note.taskStatus && (
-        <CardFooter>
-            <Badge variant="secondary" className="flex items-center">
-                {statusIcons[note.taskStatus]}
-                {TASK_STATUS_LABELS[note.taskStatus]}
-            </Badge>
-        </CardFooter>
-      )}
+      <CardFooter>
+          <Badge variant="secondary">{STAGE_LABELS[task.stage]}</Badge>
+      </CardFooter>
     </Card>
   );
 }

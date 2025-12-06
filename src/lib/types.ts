@@ -1,20 +1,35 @@
-export type TaskStatus = 'todo' | 'need_tobe_braken_down' | 'blocked';
 
-export const TASK_STATUSES: TaskStatus[] = ['todo', 'need_tobe_braken_down', 'blocked'];
+export type Stage = 'Entry' | 'Actionable' | 'Incubate' | 'Reference';
 
-export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: 'To Do',
-  need_tobe_braken_down: 'Needs Breakdown',
-  blocked: 'Blocked',
+export const STAGES: Stage[] = ['Entry', 'Actionable', 'Incubate', 'Reference'];
+
+export const STAGE_LABELS: Record<Stage, string> = {
+  Entry: 'Entry',
+  Actionable: 'Actionable',
+  Incubate: 'Incubate',
+  Reference: 'Reference',
 };
 
-export type NoteCategory = 'memo' | 'task';
+export interface Identifier {
+  name: string;
+  color?: string;
+  icon?: string;
+}
 
-export interface Note {
+export interface Task {
   id: string;
+  detail: string; // Formerly title/content
+  context?: Identifier;
+  timeFrame?: {
+    start?: number; // timestamp
+    end?: number; // timestamp
+  };
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+  alertDateTime?: number; // timestamp
+  deadlineDateTime?: number; // timestamp
+  priority?: number;
+  children?: Task[];
+  stage: Stage;
   createdAt: number; // timestamp
-  content: string;
-  title: string;
-  category: NoteCategory;
-  taskStatus?: TaskStatus;
 }
