@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, StopCircle, Save, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +29,6 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
   const [transcript, setTranscript] = useState('');
   const [recordingTime, setRecordingTime] = useState(0);
   const [speechRecognitionSupported, setSpeechRecognitionSupported] = useState(false);
-
   const recognitionRef = useRef<any | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -37,42 +36,53 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
 
   useEffect(() => {
     // This effect runs only on the client
+    setSpeechRecognitionSupported(
+      'SpeechRecognition' in window || 'webkitSpeechRecognition' in window
+    );
+  }, []);
+
+  const initializeRecognition = useCallback(() => {
+    if (!speechRecognitionSupported) {
+      return;
+    }
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      setSpeechRecognitionSupported(true);
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
 
-      recognition.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = 0; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
         }
-        setTranscript(prev => prev + finalTranscript + interimTranscript);
-      };
-      
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        toast({
-          variant: 'destructive',
-          title: 'Recognition Error',
-          description: `An error occurred: ${event.error}`,
-        });
-        setIsRecording(false);
-      };
-      
-      recognitionRef.current = recognition;
+      }
+      setTranscript(finalTranscript + interimTranscript);
+    };
+    
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      toast({
+        variant: 'destructive',
+        title: 'Recognition Error',
+        description: `An error occurred: ${event.error}`,
+      });
+      setIsRecording(false);
+    };
+    
+    recognitionRef.current = recognition;
+  }, [speechRecognitionSupported, toast]);
 
-    } else {
-      setSpeechRecognitionSupported(false);
-      if (isOpen) {
+  useEffect(() => {
+    if (isOpen) {
+      if (speechRecognitionSupported) {
+        initializeRecognition();
+      } else {
         toast({
           variant: 'destructive',
           title: 'Browser Not Supported',
@@ -80,7 +90,8 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
         });
       }
     }
-  }, [toast, isOpen]);
+  }, [isOpen, speechRecognitionSupported, initializeRecognition, toast]);
+
 
   useEffect(() => {
     if (isRecording) {
@@ -103,9 +114,9 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
   const handleStartRecording = () => {
     if (recognitionRef.current) {
       setTranscript('');
+      setTitle('');
       recognitionRef.current.start();
       setIsRecording(true);
-      setTitle('');
     }
   };
 
@@ -131,6 +142,10 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
     setTranscript('');
     setTitle('');
     setRecordingTime(0);
+    if(recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+    }
   }
 
   const formatTime = (seconds: number) => {
@@ -163,6 +178,7 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
                 size="lg"
                 className="h-20 w-20 rounded-full"
                 onClick={isRecording ? handleStopRecording : handleStartRecording}
+                disabled={!speechRecognitionSupported}
               >
                 {isRecording ? <StopCircle className="h-10 w-10" /> : <Mic className="h-10 w-10" />}
               </Button>
