@@ -48,7 +48,7 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className={cn("w-full transition-all hover:shadow-md overflow-hidden", task.completed && "bg-muted/50")}>
-        <div className="flex items-center p-2">
+        <div className="flex items-center p-2 min-w-0">
             {showCheckbox && (
               <Checkbox
                 id={`task-${task.id}`}
