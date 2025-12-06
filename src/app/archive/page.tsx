@@ -41,7 +41,7 @@ export default function ArchivePage() {
             <Skeleton className="h-12 w-full" />
           </div>
         ) : (
-          <TaskList tasks={archiveTasks} onUpdateTask={handleUpdate} onDeleteTask={deleteTask} />
+          <TaskList tasks={archiveTasks} onUpdateTask={handleUpdate} onDeleteTask={deleteTask} showCheckbox={false} />
         )}
       </main>
       

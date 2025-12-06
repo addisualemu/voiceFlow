@@ -43,7 +43,7 @@ export default function IncubatePage() {
             </div>
           </div>
         ) : (
-          <TasksBoard tasks={incubateTasks} onUpdateTask={handleUpdate} onDeleteTask={deleteTask} stages={['Incubate']} />
+          <TasksBoard tasks={incubateTasks} onUpdateTask={handleUpdate} onDeleteTask={deleteTask} stages={['Incubate']} showCheckbox={false} />
         )}
       </main>
       

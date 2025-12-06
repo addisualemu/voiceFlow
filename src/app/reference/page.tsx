@@ -43,7 +43,7 @@ export default function ReferencePage() {
             </div>
           </div>
         ) : (
-          <TasksBoard tasks={referenceTasks} onUpdateTask={handleUpdate} onDeleteTask={deleteTask} stages={['Reference']} />
+          <TasksBoard tasks={referenceTasks} onUpdateTask={handleUpdate} onDeleteTask={deleteTask} stages={['Reference']} showCheckbox={false} />
         )}
       </main>
       

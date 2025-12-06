@@ -11,9 +11,10 @@ interface TasksBoardProps {
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
   stages?: Stage[];
+  showCheckbox?: boolean;
 }
 
-export default function TasksBoard({ tasks, onUpdateTask, onDeleteTask, stages = STAGES }: TasksBoardProps) {
+export default function TasksBoard({ tasks, onUpdateTask, onDeleteTask, stages = STAGES, showCheckbox = true }: TasksBoardProps) {
   
   if (tasks.length === 0) {
     return (
@@ -33,7 +34,7 @@ export default function TasksBoard({ tasks, onUpdateTask, onDeleteTask, stages =
 
   // If there's only one stage, use the list view.
   if (stages.length === 1) {
-    return <TaskList tasks={tasks} onUpdateTask={onUpdateTask} onDeleteTask={onDeleteTask} />
+    return <TaskList tasks={tasks} onUpdateTask={onUpdateTask} onDeleteTask={onDeleteTask} showCheckbox={showCheckbox} />
   }
 
   return (
@@ -43,7 +44,7 @@ export default function TasksBoard({ tasks, onUpdateTask, onDeleteTask, stages =
             <h2 className="text-xl font-semibold mb-4">{STAGE_LABELS[stage]}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {(groupedTasks[stage] || []).map((task) => (
-                <TaskCard key={task.id} task={task} onUpdate={onUpdateTask} onDelete={onDeleteTask} />
+                <TaskCard key={task.id} task={task} onUpdate={onUpdateTask} onDelete={onDeleteTask} showCheckbox={showCheckbox} />
               ))}
               {(groupedTasks[stage] || []).length === 0 && (
                   <div className="text-center py-10 text-sm text-muted-foreground border-2 border-dashed rounded-lg col-span-full">

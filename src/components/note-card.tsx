@@ -29,9 +29,10 @@ interface TaskCardProps {
   task: Task;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
+  showCheckbox?: boolean;
 }
 
-export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
+export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true }: TaskCardProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleStageChange = (stage: Stage) => {
@@ -48,15 +49,17 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className={cn("w-full transition-all hover:shadow-md", task.completed && "bg-muted/50")}>
         <div className="flex items-center p-2">
-            <Checkbox
-              id={`task-${task.id}`}
-              checked={task.completed}
-              onCheckedChange={handleCompleteToggle}
-              className="mr-4"
-              aria-label="Mark task as complete"
-            />
+            {showCheckbox && (
+              <Checkbox
+                id={`task-${task.id}`}
+                checked={task.completed}
+                onCheckedChange={handleCompleteToggle}
+                className="mr-4"
+                aria-label="Mark task as complete"
+              />
+            )}
             <CollapsibleTrigger asChild>
-              <div className="flex-grow cursor-pointer overflow-hidden">
+              <div className={cn("flex-grow cursor-pointer overflow-hidden", !showCheckbox && 'ml-4')}>
                 <p className={cn("text-sm font-medium leading-none", task.completed && "line-through text-muted-foreground", !isOpen && "truncate")}>
                   {title}
                 </p>

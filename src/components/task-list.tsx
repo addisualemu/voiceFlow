@@ -8,9 +8,10 @@ interface TaskListProps {
   tasks: Task[];
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
+  showCheckbox?: boolean;
 }
 
-export default function TaskList({ tasks, onUpdateTask, onDeleteTask }: TaskListProps) {
+export default function TaskList({ tasks, onUpdateTask, onDeleteTask, showCheckbox = true }: TaskListProps) {
   if (tasks.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -28,6 +29,7 @@ export default function TaskList({ tasks, onUpdateTask, onDeleteTask }: TaskList
           task={task}
           onUpdate={onUpdateTask}
           onDelete={onDeleteTask}
+          showCheckbox={showCheckbox}
         />
       ))}
     </div>

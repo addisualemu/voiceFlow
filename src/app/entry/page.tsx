@@ -43,7 +43,7 @@ export default function EntryPage() {
             </div>
           </div>
         ) : (
-          <TasksBoard tasks={entryTasks} onUpdateTask={handleUpdate} onDeleteTask={deleteTask} stages={['Entry']} />
+          <TasksBoard tasks={entryTasks} onUpdateTask={handleUpdate} onDeleteTask={deleteTask} stages={['Entry']} showCheckbox={false} />
         )}
       </main>
       
