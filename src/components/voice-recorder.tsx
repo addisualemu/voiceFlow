@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
@@ -35,6 +36,7 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
   const { toast } = useToast();
 
   useEffect(() => {
+    // This effect runs only on the client
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       setSpeechRecognitionSupported(true);
@@ -115,7 +117,7 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
   };
 
   const handleSave = () => {
-    if (transcript) {
+    if (transcript || title) {
       setIsProcessing(true);
       onNewNote(transcript, title);
       setIsProcessing(false);
@@ -174,31 +176,29 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
               </div>
             </div>
 
-            {(transcript || isRecording) && (
-              <div className="grid w-full items-center gap-1.5">
-                 <Label htmlFor="title">Title (optional)</Label>
-                <Input
-                  id="title"
-                  placeholder="e.g., Meeting idea"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-                <Label htmlFor="transcript">Transcript</Label>
-                <Textarea
-                  id="transcript"
-                  value={transcript}
-                  onChange={(e) => setTranscript(e.target.value)}
-                  placeholder={isRecording ? "Listening..." : "Your transcribed text will appear here."}
-                  rows={8}
-                />
-              </div>
-            )}
+            <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="title">Title (optional)</Label>
+              <Input
+                id="title"
+                placeholder="e.g., Meeting idea"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              <Label htmlFor="transcript">Transcript</Label>
+              <Textarea
+                id="transcript"
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                placeholder={isRecording ? "Listening..." : "Your transcribed text will appear here."}
+                rows={8}
+              />
+            </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
                 <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSave} disabled={!transcript || isProcessing}>
+            <Button onClick={handleSave} disabled={!(transcript || title) || isProcessing}>
               {isProcessing ? <LoaderCircle className="animate-spin" /> : <Save />}
               Save Note
             </Button>
