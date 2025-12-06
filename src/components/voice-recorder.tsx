@@ -20,12 +20,6 @@ interface VoiceRecorderProps {
   onNewNote: (content: string, title: string) => void;
 }
 
-let SpeechRecognition: any = null;
-if (typeof window !== 'undefined') {
-  SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-}
-
-
 export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -33,6 +27,7 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
   const [title, setTitle] = useState('');
   const [transcript, setTranscript] = useState('');
   const [recordingTime, setRecordingTime] = useState(0);
+  const [speechRecognitionSupported, setSpeechRecognitionSupported] = useState(false);
 
   const recognitionRef = useRef<any | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -40,47 +35,50 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!SpeechRecognition) {
-      if(isOpen) {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setSpeechRecognitionSupported(true);
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        setTranscript(prev => prev + finalTranscript + interimTranscript);
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        toast({
+          variant: 'destructive',
+          title: 'Recognition Error',
+          description: `An error occurred: ${event.error}`,
+        });
+        setIsRecording(false);
+      };
+      
+      recognitionRef.current = recognition;
+
+    } else {
+      setSpeechRecognitionSupported(false);
+      if (isOpen) {
         toast({
           variant: 'destructive',
           title: 'Browser Not Supported',
           description: 'Speech recognition is not supported in your browser.',
         });
       }
-      return;
     }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-
-    recognition.onresult = (event: any) => {
-      let interimTranscript = '';
-      let finalTranscript = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
-        }
-      }
-      setTranscript(transcript + finalTranscript + interimTranscript);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      toast({
-        variant: 'destructive',
-        title: 'Recognition Error',
-        description: `An error occurred: ${event.error}`,
-      });
-      setIsRecording(false);
-    };
-
-    recognitionRef.current = recognition;
-  }, [toast, transcript, isOpen]);
+  }, [toast, isOpen]);
 
   useEffect(() => {
     if (isRecording) {
@@ -146,7 +144,7 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
         size="icon"
         onClick={() => setIsOpen(true)}
         aria-label="Record new note"
-        disabled={!SpeechRecognition}
+        disabled={!speechRecognitionSupported}
       >
         <Mic className="h-8 w-8" />
       </Button>
