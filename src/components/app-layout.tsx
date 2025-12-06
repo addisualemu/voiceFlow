@@ -10,8 +10,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
-  SidebarTrigger,
-  SidebarInset,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -31,38 +30,50 @@ const navItems = [
   { href: '/archive', label: 'Archive', icon: Archive },
 ];
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+function Nav() {
+    const pathname = usePathname();
+    const { setOpenMobile, isMobile } = useSidebar();
 
+    const handleLinkClick = () => {
+        if (isMobile) {
+            setOpenMobile(false);
+        }
+    }
+
+    return (
+        <SidebarMenu>
+            {navItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                <Link href={item.href} onClick={handleLinkClick}>
+                    <SidebarMenuButton
+                    tooltip={item.label}
+                    isActive={pathname === item.href}
+                    >
+                    <item.icon />
+                    <span>{item.label}</span>
+                    </SidebarMenuButton>
+                </Link>
+                </SidebarMenuItem>
+            ))}
+        </SidebarMenu>
+    )
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
-      <Sidebar side="left" variant="floating" collapsible="icon">
+      <Sidebar>
         <SidebarHeader>
           {/* You can add a logo or header content here */}
         </SidebarHeader>
         <SidebarContent>
-          <SidebarMenu>
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <Link href={item.href}>
-                  <SidebarMenuButton
-                    tooltip={item.label}
-                    isActive={pathname === item.href}
-                    asChild={false} 
-                  >
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
+            <Nav />
         </SidebarContent>
         <SidebarFooter>
           {/* Footer content if any */}
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>{children}</SidebarInset>
+        {children}
     </SidebarProvider>
   );
 }
