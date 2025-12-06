@@ -65,7 +65,7 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
                 </p>
                 {!isOpen && details.length > 0 && (
                    <p className="text-xs text-muted-foreground truncate">
-                    {details.join(' ').substring(0, 20) + (details.join(' ').length > 20 ? '...' : '')}
+                    {details.join(' ')}
                   </p>
                 )}
               </div>
