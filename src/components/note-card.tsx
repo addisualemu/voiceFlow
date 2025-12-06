@@ -56,8 +56,8 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
               aria-label="Mark task as complete"
             />
             <CollapsibleTrigger asChild>
-              <div className="flex-grow cursor-pointer">
-                <p className={cn("text-sm font-medium leading-none", task.completed && "line-through text-muted-foreground")}>
+              <div className="flex-grow cursor-pointer overflow-hidden">
+                <p className={cn("text-sm font-medium leading-none", task.completed && "line-through text-muted-foreground", !isOpen && "truncate")}>
                   {title}
                 </p>
                 {!isOpen && details.length > 0 && (
