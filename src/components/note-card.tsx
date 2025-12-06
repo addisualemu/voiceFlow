@@ -60,7 +60,7 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
             )}
             <CollapsibleTrigger asChild>
               <div className={cn("flex-grow cursor-pointer overflow-hidden", !showCheckbox && 'ml-4')}>
-                <p className={cn("text-sm font-medium leading-none", task.completed && "line-through text-muted-foreground", !isOpen && "truncate")}>
+                <p className={cn("truncate text-sm font-medium leading-none", task.completed && "line-through text-muted-foreground")}>
                   {title}
                 </p>
                 {!isOpen && details.length > 0 && (
@@ -127,8 +127,8 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
                 </CollapsibleTrigger>
             </Button>
         </div>
-        <CollapsibleContent className="min-w-0">
-            <CardContent className="px-12 py-2 break-words">
+        <CollapsibleContent>
+            <CardContent className="px-12 py-2 break-words overflow-hidden">
                 {details.length > 0 && <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-2">{details.join('\n')}</p>}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <Badge variant="secondary">{STAGE_LABELS[task.stage]}</Badge>
