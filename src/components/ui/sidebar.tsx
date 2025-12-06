@@ -168,7 +168,7 @@ const Sidebar = React.forwardRef<
   (
     {
       side = "left",
-      variant = "sidebar",
+      variant = "floating",
       collapsible = "icon",
       className,
       children,
@@ -762,3 +762,5 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
+    
