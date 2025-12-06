@@ -7,29 +7,29 @@ import TasksBoard from "@/components/tasks-board";
 import VoiceRecorder from "@/components/voice-recorder";
 import { useTasks } from "@/hooks/use-voice-notes";
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Task, Stage } from "@/lib/types";
+import type { Task } from "@/lib/types";
 
-export default function Home() {
+export default function ReferencePage() {
   const { tasks, addTask, updateTask, deleteTask, isLoading } = useTasks();
 
-  const handleUpdate = (id: string, updates: Partial<(typeof tasks)[0]>) => {
+  const handleUpdate = (id: string, updates: Partial<Task>) => {
     updateTask(id, updates);
   };
 
-  const actionableTasks = useMemo(() => {
-    return tasks.filter(task => task.stage === 'Actionable');
+  const referenceTasks = useMemo(() => {
+    return tasks.filter(task => task.stage === 'Reference');
   }, [tasks]);
   
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
         <header className="mb-8 text-center">
-          <h1 className="text-4xl font-headline font-bold text-primary">My Day</h1>
-          <p className="text-muted-foreground mt-2">Your actionable tasks for today.</p>
+          <h1 className="text-4xl font-headline font-bold text-primary">Reference</h1>
+          <p className="text-muted-foreground mt-2">Items for future reference.</p>
           <nav className="mt-4 flex justify-center gap-4 text-primary">
+            <Link href="/" className="hover:underline">My Day</Link>
             <Link href="/entry" className="hover:underline">Entry</Link>
             <Link href="/incubate" className="hover:underline">Incubate</Link>
-            <Link href="/reference" className="hover:underline">Reference</Link>
           </nav>
         </header>
 
@@ -43,7 +43,7 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <TasksBoard tasks={actionableTasks} onUpdateTask={handleUpdate} onDeleteTask={deleteTask} stages={['Actionable']} />
+          <TasksBoard tasks={referenceTasks} onUpdateTask={handleUpdate} onDeleteTask={deleteTask} stages={['Reference']} />
         )}
       </main>
       

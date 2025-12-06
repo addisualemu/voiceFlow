@@ -10,9 +10,10 @@ interface TasksBoardProps {
   tasks: Task[];
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
+  stages?: Stage[];
 }
 
-export default function TasksBoard({ tasks, onUpdateTask, onDeleteTask }: TasksBoardProps) {
+export default function TasksBoard({ tasks, onUpdateTask, onDeleteTask, stages = STAGES }: TasksBoardProps) {
   
   if (tasks.length === 0) {
     return (
@@ -24,15 +25,17 @@ export default function TasksBoard({ tasks, onUpdateTask, onDeleteTask }: TasksB
   }
   
   const groupedTasks = tasks.reduce((acc, task) => {
-    (acc[task.stage] = acc[task.stage] || []).push(task);
+    if (stages.includes(task.stage)) {
+        (acc[task.stage] = acc[task.stage] || []).push(task);
+    }
     return acc;
   }, {} as Record<Stage, Task[]>);
 
   return (
     <div className="w-full space-y-6">
-      {STAGES.map((stage: Stage) => (
+      {stages.map((stage: Stage) => (
         <div key={stage}>
-            <h2 className="text-xl font-semibold mb-4">{STAGE_LABELS[stage]}</h2>
+            {stages.length > 1 && <h2 className="text-xl font-semibold mb-4">{STAGE_LABELS[stage]}</h2>}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {(groupedTasks[stage] || []).map((task) => (
                 <TaskCard key={task.id} task={task} onUpdate={onUpdateTask} onDelete={onDeleteTask} />
