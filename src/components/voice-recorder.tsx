@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { Mic, StopCircle, Save, X, LoaderCircle } from 'lucide-react';
+import { Mic, StopCircle, Save, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,25 +14,73 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { Textarea } from './ui/textarea';
 
 interface VoiceRecorderProps {
-  onNewNote: (audioBlob: Blob, title: string) => void;
+  onNewNote: (content: string, title: string) => void;
 }
+
+let SpeechRecognition: any = null;
+if (typeof window !== 'undefined') {
+  SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+}
+
 
 export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [title, setTitle] = useState('');
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [transcript, setTranscript] = useState('');
   const [recordingTime, setRecordingTime] = useState(0);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!SpeechRecognition) {
+      if(isOpen) {
+        toast({
+          variant: 'destructive',
+          title: 'Browser Not Supported',
+          description: 'Speech recognition is not supported in your browser.',
+        });
+      }
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      setTranscript(transcript + finalTranscript + interimTranscript);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      toast({
+        variant: 'destructive',
+        title: 'Recognition Error',
+        description: `An error occurred: ${event.error}`,
+      });
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+  }, [toast, transcript, isOpen]);
 
   useEffect(() => {
     if (isRecording) {
@@ -52,49 +100,26 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
     };
   }, [isRecording]);
 
-  const handleStartRecording = async () => {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorderRef.current = new MediaRecorder(stream);
-        audioChunksRef.current = [];
-
-        mediaRecorderRef.current.ondataavailable = (event) => {
-          audioChunksRef.current.push(event.data);
-        };
-
-        mediaRecorderRef.current.onstop = () => {
-          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          setAudioBlob(blob);
-          stream.getTracks().forEach(track => track.stop()); // Stop microphone access
-        };
-
-        mediaRecorderRef.current.start();
-        setIsRecording(true);
-        setAudioBlob(null);
-        setTitle('');
-      } catch (err) {
-        console.error('Error accessing microphone:', err);
-        toast({
-          variant: 'destructive',
-          title: 'Microphone Error',
-          description: 'Could not access the microphone. Please check your browser permissions.',
-        });
-      }
+  const handleStartRecording = () => {
+    if (recognitionRef.current) {
+      setTranscript('');
+      recognitionRef.current.start();
+      setIsRecording(true);
+      setTitle('');
     }
   };
 
   const handleStopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
       setIsRecording(false);
     }
   };
 
   const handleSave = () => {
-    if (audioBlob) {
+    if (transcript) {
       setIsProcessing(true);
-      onNewNote(audioBlob, title);
+      onNewNote(transcript, title);
       setIsProcessing(false);
       resetAndClose();
     }
@@ -103,7 +128,7 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
   const resetAndClose = () => {
     setIsOpen(false);
     setIsRecording(false);
-    setAudioBlob(null);
+    setTranscript('');
     setTitle('');
     setRecordingTime(0);
   }
@@ -121,6 +146,7 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
         size="icon"
         onClick={() => setIsOpen(true)}
         aria-label="Record new note"
+        disabled={!SpeechRecognition}
       >
         <Mic className="h-8 w-8" />
       </Button>
@@ -150,18 +176,23 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
               </div>
             </div>
 
-            {audioBlob && (
+            {(transcript || isRecording) && (
               <div className="grid w-full items-center gap-1.5">
-                <Label htmlFor="title">Title (optional)</Label>
+                 <Label htmlFor="title">Title (optional)</Label>
                 <Input
                   id="title"
                   placeholder="e.g., Meeting idea"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
-                <div className="mt-2">
-                  <audio src={URL.createObjectURL(audioBlob)} controls className="w-full" />
-                </div>
+                <Label htmlFor="transcript">Transcript</Label>
+                <Textarea
+                  id="transcript"
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  placeholder={isRecording ? "Listening..." : "Your transcribed text will appear here."}
+                  rows={8}
+                />
               </div>
             )}
           </div>
@@ -169,7 +200,7 @@ export default function VoiceRecorder({ onNewNote }: VoiceRecorderProps) {
             <DialogClose asChild>
                 <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSave} disabled={!audioBlob || isProcessing}>
+            <Button onClick={handleSave} disabled={!transcript || isProcessing}>
               {isProcessing ? <LoaderCircle className="animate-spin" /> : <Save />}
               Save Note
             </Button>

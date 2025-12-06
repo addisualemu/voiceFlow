@@ -114,11 +114,7 @@ export default function NoteCard({ note, onUpdate, onDelete }: NoteCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {note.audioUrl ? (
-          <audio src={note.audioUrl} controls className="w-full" />
-        ) : (
-          <div className="text-sm text-muted-foreground">Audio not available.</div>
-        )}
+        <p className="text-sm text-foreground whitespace-pre-wrap">{note.content}</p>
       </CardContent>
       {note.category === 'task' && note.taskStatus && (
         <CardFooter>

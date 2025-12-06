@@ -13,7 +13,7 @@ export type NoteCategory = 'memo' | 'task';
 export interface Note {
   id: string;
   createdAt: number; // timestamp
-  audioUrl: string;
+  content: string;
   title: string;
   category: NoteCategory;
   taskStatus?: TaskStatus;
