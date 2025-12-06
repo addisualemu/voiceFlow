@@ -11,6 +11,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   useSidebar,
+  SidebarInset,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -73,7 +74,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Footer content if any */}
         </SidebarFooter>
       </Sidebar>
-        {children}
+      <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );
 }
