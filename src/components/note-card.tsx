@@ -128,7 +128,7 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
             </Button>
         </div>
         <CollapsibleContent>
-            <CardContent className="px-12 py-2">
+            <CardContent className="px-12 py-2 break-words">
                 {details.length > 0 && <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-2">{details.join('\n')}</p>}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <Badge variant="secondary">{STAGE_LABELS[task.stage]}</Badge>
