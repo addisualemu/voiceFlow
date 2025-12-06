@@ -4,7 +4,7 @@
 import type { Task, Stage } from "@/lib/types";
 import { STAGES, STAGE_LABELS } from "@/lib/types";
 import TaskCard from "./note-card";
-import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
+import TaskList from "./task-list";
 
 interface TasksBoardProps {
   tasks: Task[];
@@ -31,11 +31,16 @@ export default function TasksBoard({ tasks, onUpdateTask, onDeleteTask, stages =
     return acc;
   }, {} as Record<Stage, Task[]>);
 
+  // If there's only one stage, use the list view.
+  if (stages.length === 1) {
+    return <TaskList tasks={tasks} onUpdateTask={onUpdateTask} onDeleteTask={onDeleteTask} />
+  }
+
   return (
     <div className="w-full space-y-6">
       {stages.map((stage: Stage) => (
         <div key={stage}>
-            {stages.length > 1 && <h2 className="text-xl font-semibold mb-4">{STAGE_LABELS[stage]}</h2>}
+            <h2 className="text-xl font-semibold mb-4">{STAGE_LABELS[stage]}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {(groupedTasks[stage] || []).map((task) => (
                 <TaskCard key={task.id} task={task} onUpdate={onUpdateTask} onDelete={onDeleteTask} />

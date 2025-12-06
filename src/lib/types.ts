@@ -1,13 +1,14 @@
 
-export type Stage = 'Entry' | 'Actionable' | 'Incubate' | 'Reference';
+export type Stage = 'Entry' | 'Actionable' | 'Incubate' | 'Reference' | 'Archive';
 
-export const STAGES: Stage[] = ['Entry', 'Actionable', 'Incubate', 'Reference'];
+export const STAGES: Stage[] = ['Entry', 'Actionable', 'Incubate', 'Reference', 'Archive'];
 
 export const STAGE_LABELS: Record<Stage, string> = {
   Entry: 'Entry',
   Actionable: 'Actionable',
   Incubate: 'Incubate',
   Reference: 'Reference',
+  Archive: 'Archive',
 };
 
 export interface Identifier {
@@ -32,4 +33,5 @@ export interface Task {
   children?: Task[];
   stage: Stage;
   createdAt: number; // timestamp
+  completed: boolean;
 }

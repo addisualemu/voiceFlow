@@ -1,14 +1,16 @@
 
 "use client"
 
+import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { MoreVertical, Trash2, Edit } from 'lucide-react';
+import { MoreVertical, Trash2, Edit, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Task, Stage } from "@/lib/types";
 import { STAGES, STAGE_LABELS } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +22,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Card, CardContent } from './ui/card';
+import { cn } from '@/lib/utils';
 
 interface TaskCardProps {
   task: Task;
@@ -28,26 +32,43 @@ interface TaskCardProps {
 }
 
 export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleStageChange = (stage: Stage) => {
     onUpdate(task.id, { stage });
   };
   
+  const handleCompleteToggle = () => {
+    onUpdate(task.id, { completed: !task.completed });
+  };
+  
+  const [title, ...details] = task.detail.split('\n');
+
   return (
-    <Card className="w-full transition-all hover:shadow-md">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-            <div className="space-y-1">
-                <CardTitle className="text-lg">{task.detail.split('\n')[0]}</CardTitle>
-                <CardDescription>
-                    {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
-                </CardDescription>
-            </div>
-          
-            <AlertDialog>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className={cn("w-full transition-all hover:shadow-md", task.completed && "bg-muted/50")}>
+        <div className="flex items-center p-2">
+            <Checkbox
+              id={`task-${task.id}`}
+              checked={task.completed}
+              onCheckedChange={handleCompleteToggle}
+              className="mr-4"
+              aria-label="Mark task as complete"
+            />
+            <CollapsibleTrigger asChild>
+              <div className="flex-grow cursor-pointer">
+                <p className={cn("text-sm font-medium leading-none", task.completed && "line-through text-muted-foreground")}>
+                  {title}
+                </p>
+                {!isOpen && details.length > 0 && (
+                   <p className="text-xs text-muted-foreground truncate">{details.join(' ')}</p>
+                )}
+              </div>
+            </CollapsibleTrigger>
+             <AlertDialog>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 ml-2">
                         <MoreVertical className="h-4 w-4" />
                     </Button>
                     </DropdownMenuTrigger>
@@ -60,18 +81,18 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
                     </DropdownMenuItem>
 
                     <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>Change Stage</DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                        <DropdownMenuSubContent>
-                        <DropdownMenuLabel>Move to</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {STAGES.map(stage => (
-                            <DropdownMenuItem key={stage} onClick={() => handleStageChange(stage)}>
-                            {STAGE_LABELS[stage]}
-                            </DropdownMenuItem>
-                        ))}
-                        </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
+                      <DropdownMenuSubTrigger>Change Stage</DropdownMenuSubTrigger>
+                      <DropdownMenuPortal>
+                          <DropdownMenuSubContent>
+                          <DropdownMenuLabel>Move to</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {STAGES.map(stage => (
+                              <DropdownMenuItem key={stage} onClick={() => handleStageChange(stage)}>
+                              {STAGE_LABELS[stage]}
+                              </DropdownMenuItem>
+                          ))}
+                          </DropdownMenuSubContent>
+                      </DropdownMenuPortal>
                     </DropdownMenuSub>
 
                     <DropdownMenuSeparator />
@@ -97,14 +118,22 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <CollapsibleTrigger>
+                    {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </CollapsibleTrigger>
+            </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-foreground whitespace-pre-wrap">{task.detail}</p>
-      </CardContent>
-      <CardFooter>
-          <Badge variant="secondary">{STAGE_LABELS[task.stage]}</Badge>
-      </CardFooter>
-    </Card>
+        <CollapsibleContent>
+            <CardContent className="px-12 py-2">
+                {details.length > 0 && <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-2">{details.join('\n')}</p>}
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <Badge variant="secondary">{STAGE_LABELS[task.stage]}</Badge>
+                    <span>{formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}</span>
+                </div>
+            </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }

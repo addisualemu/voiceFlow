@@ -8,12 +8,12 @@ import { useToast } from "@/hooks/use-toast";
 const LOCAL_STORAGE_KEY = 'voiceflow-tasks';
 
 const initialTasks: Task[] = [
-  { id: '1', detail: 'Brainstorm marketing ideas. We should explore social media campaigns and influencer marketing.', createdAt: Date.now() - 1000 * 60 * 5, stage: 'Actionable', priority: 1 },
-  { id: '2', detail: 'Weekly team sync feedback. The new sprint planning process is working well. Keep it up.', createdAt: Date.now() - 1000 * 60 * 60 * 2, stage: 'Reference' },
-  { id: '3', detail: 'Refactor the authentication flow. The current implementation is complex. Need to break it down into smaller, manageable parts. Start with the JWT handling.', createdAt: Date.now() - 1000 * 60 * 60 * 24, stage: 'Actionable', priority: 2 },
-  { id: '4', detail: 'Grocery list: Milk, eggs, bread, and coffee.', createdAt: Date.now() - 1000 * 60 * 30, stage: 'Entry' },
-  { id: '5', detail: "API key is expiring. The billing API key needs to be rotated. I'm blocked by finance to get the new key.", createdAt: Date.now() - 1000 * 60 * 60 * 8, stage: 'Incubate' },
-  { id: '6', detail: 'Follow up with Jane Doe. Send an email to Jane about the Q3 proposal.', createdAt: Date.now() - 1000 * 60 * 60 * 3, stage: 'Actionable', priority: 1 },
+  { id: '1', detail: 'Brainstorm marketing ideas. We should explore social media campaigns and influencer marketing.', createdAt: Date.now() - 1000 * 60 * 5, stage: 'Actionable', priority: 1, completed: false },
+  { id: '2', detail: 'Weekly team sync feedback. The new sprint planning process is working well. Keep it up.', createdAt: Date.now() - 1000 * 60 * 60 * 2, stage: 'Reference', completed: false },
+  { id: '3', detail: 'Refactor the authentication flow. The current implementation is complex. Need to break it down into smaller, manageable parts. Start with the JWT handling.', createdAt: Date.now() - 1000 * 60 * 60 * 24, stage: 'Actionable', priority: 2, completed: true },
+  { id: '4', detail: 'Grocery list: Milk, eggs, bread, and coffee.', createdAt: Date.now() - 1000 * 60 * 30, stage: 'Entry', completed: false },
+  { id: '5', detail: "API key is expiring. The billing API key needs to be rotated. I'm blocked by finance to get the new key.", createdAt: Date.now() - 1000 * 60 * 60 * 8, stage: 'Incubate', completed: false },
+  { id: '6', detail: 'Follow up with Jane Doe. Send an email to Jane about the Q3 proposal.', createdAt: Date.now() - 1000 * 60 * 60 * 3, stage: 'Actionable', priority: 1, completed: false },
 ];
 
 export function useTasks() {
@@ -58,6 +58,7 @@ export function useTasks() {
       createdAt: Date.now(),
       detail: title ? `${title}\n${content}`: content,
       stage: 'Entry',
+      completed: false,
     };
     saveTasks([newTask, ...tasks]);
     toast({
