@@ -47,7 +47,7 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className={cn("w-full transition-all hover:shadow-md", task.completed && "bg-muted/50")}>
+      <Card className={cn("w-full transition-all hover:shadow-md overflow-hidden", task.completed && "bg-muted/50")}>
         <div className="flex items-center p-2">
             {showCheckbox && (
               <Checkbox
@@ -128,7 +128,7 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
             </Button>
         </div>
         <CollapsibleContent>
-            <CardContent className="px-12 py-2 break-words overflow-hidden">
+            <CardContent className="px-12 py-2 break-all">
                 {details.length > 0 && <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-2">{details.join('\n')}</p>}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <Badge variant="secondary">{STAGE_LABELS[task.stage]}</Badge>
