@@ -60,13 +60,17 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
             )}
             <CollapsibleTrigger asChild>
               <div className={cn("flex-grow cursor-pointer overflow-hidden min-w-0", !showCheckbox && 'ml-4')}>
-                <p className={cn("text-sm font-medium leading-none whitespace-normal break-all", task.completed && "line-through text-muted-foreground")}>
-                  {title}
-                </p>
-                {!isOpen && details.join(' ').length > 0 && (
-                  <p className="text-xs text-muted-foreground whitespace-normal break-all">
-                    {details.join(' ').substring(0, 30)}{details.join(' ').length > 30 ? '...' : ''}
+                {!isOpen && title.length > 0 && (
+                  <p className={cn("text-sm font-medium leading-none whitespace-normal break-all", task.completed && "line-through text-muted-foreground")}>
+                    {title.substring(0, 60)}{title.length > 60 ? '...' : ''}
                   </p>
+            
+                )}
+                {isOpen && title.length > 0 && (
+                  <p className={cn("text-sm font-medium leading-none whitespace-normal break-all", task.completed && "line-through text-muted-foreground")}>
+                    {title}
+                  </p>
+            
                 )}
               </div>
             </CollapsibleTrigger>

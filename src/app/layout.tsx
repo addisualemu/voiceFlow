@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import AppLayout from '@/components/app-layout';
+import { AuthProvider } from '@/hooks/use-auth';
 
 export const metadata: Metadata = {
   title: 'VoiceFlow',
@@ -28,11 +29,11 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AppLayout>{children}</AppLayout>
+        <AuthProvider>
+            <AppLayout>{children}</AppLayout>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>
   );
 }
-
-    
