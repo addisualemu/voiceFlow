@@ -1,7 +1,7 @@
 
 import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration is automatically
 // populated by Firebase environment variables.
@@ -16,13 +16,20 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let app: FirebaseApp;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApps()[0];
+let auth: Auth;
+let db: Firestore;
+
+function initializeFirebase() {
+    if (!getApps().length) {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+    } else {
+      app = getApps()[0];
+      auth = getAuth(app);
+      db = getFirestore(app);
+    }
+    return { app, auth, db };
 }
 
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-export { app, auth, db };
+export { initializeFirebase };
