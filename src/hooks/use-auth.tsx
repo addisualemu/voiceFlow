@@ -4,7 +4,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { onAuthStateChanged, type User, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, type Auth } from 'firebase/auth';
 import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
-import { initializeFirebase } from '@/lib/firebase';
+import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 import { useRouter, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -40,9 +42,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const { app, auth, db } = initializeFirebase();
-    setAuth(auth);
-    setDb(db);
+    const firebaseConfig = {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    };
+
+    let app: FirebaseApp;
+    let authInstance: Auth;
+    let dbInstance: Firestore;
+
+    if (!getApps().length) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+    authInstance = getAuth(app);
+    dbInstance = getFirestore(app);
+
+    setAuth(authInstance);
+    setDb(dbInstance);
   }, []);
 
   useEffect(() => {
@@ -77,7 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // Let the onAuthStateChanged handle the redirect logic
     } catch (error) {
       console.error("Error signing in with Google: ", error);
     }
@@ -87,7 +108,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     try {
       await firebaseSignOut(auth);
-      // Let the onAuthStateChanged handle the redirect logic
     } catch (error) {
       console.error("Error signing out: ", error);
     }
