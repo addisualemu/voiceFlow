@@ -35,42 +35,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { auth, db } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     if (!auth || !db) return;
 
-    // Handle the redirect result from Google sign-in
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (result && result.user) {
-          const user = result.user;
-          const userRef = doc(db, 'users', user.uid);
-          const docSnap = await getDoc(userRef);
-          if (!docSnap.exists()) {
-              await setDoc(userRef, {
-                  uid: user.uid,
-                  email: user.email,
-                  displayName: user.displayName,
-                  photoURL: user.photoURL,
-                  createdAt: new Date(),
-              });
-          }
+    const handleRedirectResult = async () => {
+        try {
+            const result = await getRedirectResult(auth);
+            if (result && result.user) {
+                const user = result.user;
+                const userRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(userRef);
+                if (!docSnap.exists()) {
+                    await setDoc(userRef, {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName,
+                        photoURL: user.photoURL,
+                        createdAt: new Date(),
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error getting redirect result:", error);
         }
-      }).catch(error => {
-        console.error("Error getting redirect result:", error);
-      }).finally(() => {
-        // This will trigger the onAuthStateChanged listener below
-      });
+    };
+    handleRedirectResult();
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-      } else {
-        setUser(null);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
       setLoading(false);
+      setAuthReady(true);
     });
 
     return () => unsubscribe();
@@ -98,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isLoginPage = pathname === '/login';
 
   useEffect(() => {
-    if (!loading) {
+    if (authReady) {
       if (!user && !isLoginPage) {
         router.replace('/login');
       }
@@ -106,10 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         router.replace('/');
       }
     }
-  }, [user, loading, isLoginPage, router]);
+  }, [user, authReady, isLoginPage, router]);
 
 
-  if (loading || (!user && !isLoginPage) || (user && isLoginPage)) {
+  if (!authReady || loading || (!user && !isLoginPage) || (user && isLoginPage)) {
     return <AuthLoading />;
   }
 
@@ -124,10 +122,6 @@ export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
-  }
-  if (context.auth === null) {
-      // This can happen during the initial render before Firebase is initialized.
-      // You can return a mock object or handle it as you see fit.
   }
   return context;
 };
