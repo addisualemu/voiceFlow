@@ -8,32 +8,35 @@ import { getFirestore, type Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/lib/firebase';
 
 interface FirebaseContextType {
-  app: FirebaseApp | null;
-  auth: Auth | null;
-  db: Firestore | null;
+  app: FirebaseApp;
+  auth: Auth;
+  db: Firestore;
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
 
-function initializeFirebase() {
-  if (getApps().length) {
-    const app = getApps()[0];
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    return { app, auth, db };
-  }
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  return { app, auth, db };
-}
-
 export function FirebaseProvider({ children }: { children: ReactNode }) {
-  const [firebase, setFirebase] = useState<FirebaseContextType>({ app: null, auth: null, db: null });
+  const [firebase, setFirebase] = useState<FirebaseContextType | null>(null);
 
   useEffect(() => {
-    setFirebase(initializeFirebase());
+    let app: FirebaseApp;
+    let auth: Auth;
+    let db: Firestore;
+
+    if (!getApps().length) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+    auth = getAuth(app);
+    db = getFirestore(app);
+    setFirebase({ app, auth, db });
   }, []);
+
+  if (!firebase) {
+    // Render nothing or a loading spinner until Firebase is initialized.
+    return null;
+  }
 
   return (
     <FirebaseContext.Provider value={firebase}>
