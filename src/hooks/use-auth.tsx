@@ -17,6 +17,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function AuthLoading() {
+    return (
+        <div className="flex h-screen w-screen items-center justify-center">
+            <div className="flex flex-col items-center space-y-4">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-[250px]" />
+                    <Skeleton className="h-4 w-[200px]" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<Auth | null>(null);
   const [db, setDb] = useState<Firestore | null>(null);
@@ -63,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      router.push('/');
+      // Let the onAuthStateChanged handle the redirect logic
     } catch (error) {
       console.error("Error signing in with Google: ", error);
     }
@@ -73,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     try {
       await firebaseSignOut(auth);
-      router.push('/login');
+      // Let the onAuthStateChanged handle the redirect logic
     } catch (error) {
       console.error("Error signing out: ", error);
     }
@@ -81,30 +95,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const isLoginPage = pathname === '/login';
 
-  if (loading || !auth) {
-    return (
-        <div className="flex h-screen w-screen items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="space-y-2">
-                    <Skeleton className="h-4 w-[250px]" />
-                    <Skeleton className="h-4 w-[200px]" />
-                </div>
-            </div>
-        </div>
-    );
+  useEffect(() => {
+    if (!loading) {
+      if (!user && !isLoginPage) {
+        router.replace('/login');
+      }
+      if (user && isLoginPage) {
+        router.replace('/');
+      }
+    }
+  }, [user, loading, isLoginPage, router]);
+
+
+  if (loading) {
+    return <AuthLoading />;
   }
 
-  if (!loading && !user && !isLoginPage) {
-    router.replace('/login');
-    return null;
+  if (!user && !isLoginPage) {
+    return <AuthLoading />;
   }
   
-  if (!loading && user && isLoginPage) {
-    router.replace('/');
-    return null;
+  if (user && isLoginPage) {
+    return <AuthLoading />;
   }
-
 
   return (
     <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
