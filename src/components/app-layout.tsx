@@ -96,11 +96,8 @@ function Profile() {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
   return (
     <SidebarProvider>
-      {user && (
         <Sidebar variant="floating" collapsible="icon">
             <SidebarHeader>
                 <Profile />
@@ -112,7 +109,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Footer content if any */}
             </SidebarFooter>
         </Sidebar>
-      )}
       <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );

@@ -7,6 +7,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFirebase } from '@/components/firebase-provider';
+import AppLayout from '@/components/app-layout';
 
 interface AuthContextType {
   user: User | null;
@@ -134,7 +135,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
-      {children}
+      {user && !isLoginPage ? (
+        <AppLayout>{children}</AppLayout>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 }
