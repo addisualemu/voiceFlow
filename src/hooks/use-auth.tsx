@@ -42,28 +42,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!auth || !db) return;
 
-    const handleRedirectResult = async () => {
-        try {
-            const result = await getRedirectResult(auth);
-            if (result && result.user) {
-                const user = result.user;
-                const userRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(userRef);
-                if (!docSnap.exists()) {
-                    await setDoc(userRef, {
-                        uid: user.uid,
-                        email: user.email,
-                        displayName: user.displayName,
-                        photoURL: user.photoURL,
-                        createdAt: new Date(),
-                    });
-                }
+    // This handles the redirect result after signing in
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          const user = result.user;
+          const userRef = doc(db, 'users', user.uid);
+          return getDoc(userRef).then(docSnap => {
+            if (!docSnap.exists()) {
+              return setDoc(userRef, {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                createdAt: new Date(),
+              });
             }
-        } catch (error) {
-            console.error("Error getting redirect result:", error);
+          });
         }
-    };
-    handleRedirectResult();
+      })
+      .catch((error) => {
+        console.error("Error getting redirect result:", error);
+      });
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
