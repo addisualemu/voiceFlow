@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!auth || !db) return;
 
+    // This combined effect handles both the redirect result and auth state changes.
     const processAuth = async () => {
         console.log('Starting auth processing...');
         try {
@@ -67,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         createdAt: serverTimestamp(),
                     });
                 }
+                // The onAuthStateChanged listener below will handle setting the user state
             }
         } catch (error) {
             console.error("Error processing redirect result:", error);
@@ -108,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     try {
       await firebaseSignOut(auth);
-      setUser(null);
+      setUser(null); // Explicitly set user to null on sign out
     } catch (error) {
       console.error("Error signing out: ", error);
     }
@@ -117,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isLoginPage = pathname === '/login';
 
   useEffect(() => {
-    if (loading) return;
+    if (loading) return; // Don't do anything until auth state is resolved
     console.log('Routing effect triggered:', { user: user?.email, isLoginPage });
     if (user && isLoginPage) {
         console.log('User is logged in on login page, redirecting to /');
@@ -128,6 +130,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, isLoginPage, loading, router]);
 
+
+  const contextValue = { user, loading, signInWithGoogle, signOut };
+
   if (loading) {
     console.log('Auth not ready, showing loading screen.');
     return <AuthLoading />;
@@ -135,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (user && !isLoginPage) {
     return (
-        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+        <AuthContext.Provider value={contextValue}>
             <AppLayout>{children}</AppLayout>
         </AuthContext.Provider>
     );
@@ -143,12 +148,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (!user && isLoginPage) {
       return (
-        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     );
   }
   
+  // This handles the case where the user is not logged in and not on the login page,
+  // or is logged in and on the login page, while the redirect is in progress.
   return <AuthLoading />;
 }
 
