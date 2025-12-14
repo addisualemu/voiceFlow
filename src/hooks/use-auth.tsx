@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { onAuthStateChanged, type User, GoogleAuthProvider, signInWithRedirect, signOut as firebaseSignOut, getRedirectResult } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFirebase } from '@/components/firebase-provider';
@@ -36,13 +36,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { auth, db } = useFirebase();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authReady, setAuthReady] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
   console.log('AuthProvider render:', {
     loading,
-    authReady,
     user: user?.email,
     pathname,
   });
@@ -50,44 +48,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!auth || !db) return;
 
-    console.log('Auth provider effect running');
-
-    // This handles the redirect result after signing in
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result && result.user) {
-          console.log('Redirect result obtained:', result.user.email);
-          const user = result.user;
-          const userRef = doc(db, 'users', user.uid);
-          return getDoc(userRef).then(docSnap => {
-            if (!docSnap.exists()) {
-              console.log('User document does not exist, creating...');
-              return setDoc(userRef, {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-                createdAt: new Date(),
-              });
+    const processAuth = async () => {
+        console.log('Starting auth processing...');
+        try {
+            const result = await getRedirectResult(auth);
+            if (result && result.user) {
+                console.log('Redirect result obtained:', result.user.email);
+                const user = result.user;
+                const userRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(userRef);
+                if (!docSnap.exists()) {
+                    console.log('User document does not exist, creating...');
+                    await setDoc(userRef, {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName,
+                        photoURL: user.photoURL,
+                        createdAt: serverTimestamp(),
+                    });
+                }
             }
-            console.log('User document already exists.');
-          });
+        } catch (error) {
+            console.error("Error processing redirect result:", error);
         }
-      })
-      .catch((error) => {
-        console.error("Error getting redirect result:", error);
-      });
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log('onAuthStateChanged triggered. User:', user?.email);
-      setUser(user);
-      setLoading(false);
-      setAuthReady(true);
-    });
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            console.log('onAuthStateChanged triggered. User:', user?.email);
+            setUser(user);
+            setLoading(false);
+        });
+
+        return unsubscribe;
+    };
+
+    const unsubscribePromise = processAuth();
 
     return () => {
-      console.log('Unsubscribing from onAuthStateChanged');
-      unsubscribe();
+        unsubscribePromise.then(unsubscribe => {
+            if (unsubscribe) {
+                console.log('Unsubscribing from onAuthStateChanged');
+                unsubscribe();
+            }
+        });
     };
   }, [auth, db]);
 
@@ -106,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     try {
       await firebaseSignOut(auth);
-      setUser(null); // Explicitly set user to null on sign out
+      setUser(null);
     } catch (error) {
       console.error("Error signing out: ", error);
     }
@@ -115,35 +117,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isLoginPage = pathname === '/login';
 
   useEffect(() => {
-    console.log('Routing effect triggered:', { authReady, user: user?.email, isLoginPage });
-    if (authReady) {
-      if (!user && !isLoginPage) {
-        console.log('Redirecting to /login');
-        router.replace('/login');
-      }
-      if (user && isLoginPage) {
-        console.log('Redirecting to /');
+    if (loading) return;
+    console.log('Routing effect triggered:', { user: user?.email, isLoginPage });
+    if (user && isLoginPage) {
+        console.log('User is logged in on login page, redirecting to /');
         router.replace('/');
-      }
+    } else if (!user && !isLoginPage) {
+        console.log('User is not logged in, redirecting to /login');
+        router.replace('/login');
     }
-  }, [user, authReady, isLoginPage, router]);
+  }, [user, isLoginPage, loading, router]);
 
-  if (loading || !authReady) {
+  if (loading) {
     console.log('Auth not ready, showing loading screen.');
     return <AuthLoading />;
   }
 
-  return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
-      {user && !isLoginPage ? (
-        <AppLayout>{children}</AppLayout>
-      ) : isLoginPage ? (
-        children
-      ) : (
-        <AuthLoading />
-      )}
-    </AuthContext.Provider>
-  );
+  if (user && !isLoginPage) {
+    return (
+        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+            <AppLayout>{children}</AppLayout>
+        </AuthContext.Provider>
+    );
+  }
+
+  if (!user && isLoginPage) {
+      return (
+        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+            {children}
+        </AuthContext.Provider>
+    );
+  }
+  
+  return <AuthLoading />;
 }
 
 export const useAuth = () => {
