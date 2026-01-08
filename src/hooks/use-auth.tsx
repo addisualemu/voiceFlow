@@ -52,11 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const processAuth = async () => {
         console.log('Starting auth processing...');
         try {
+            console.log('Calling getRedirectResult...');
             const result = await getRedirectResult(auth);
             if (result && result.user) {
                 console.log('Redirect result obtained:', result.user.email);
                 const user = result.user;
                 const userRef = doc(db, 'users', user.uid);
+                console.log('Checking for user document...');
                 const docSnap = await getDoc(userRef);
                 if (!docSnap.exists()) {
                     console.log('User document does not exist, creating...');
@@ -67,9 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         photoURL: user.photoURL,
                         createdAt: serverTimestamp(),
                     });
+                     console.log('User document created.');
+                } else {
+                    console.log('User document already exists.');
                 }
-                // The onAuthStateChanged listener below will handle setting the user state
-                // and we don't need to manually set it here.
+            } else {
+                console.log('No redirect result or no user in result.');
             }
         } catch (error) {
             console.error("Error processing redirect result:", error);
@@ -79,9 +84,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log('onAuthStateChanged triggered. User:', user?.email);
             setUser(user);
             setLoading(false);
+            console.log('State updated: user set, loading set to false.');
         });
 
-        return unsubscribe;
+        return () => {
+             console.log('Unsubscribing from onAuthStateChanged');
+             unsubscribe();
+        };
     };
 
     const unsubscribePromise = processAuth();
@@ -89,7 +98,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
         unsubscribePromise.then(unsubscribe => {
             if (unsubscribe) {
-                console.log('Unsubscribing from onAuthStateChanged');
                 unsubscribe();
             }
         });
@@ -110,7 +118,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     if (!auth) return;
     try {
+      console.log('Signing out...');
       await firebaseSignOut(auth);
+      console.log('Sign out successful.');
       // No need to explicitly set user to null, onAuthStateChanged will handle it
     } catch (error) {
       console.error("Error signing out: ", error);
@@ -120,18 +130,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isLoginPage = pathname === '/login';
 
   useEffect(() => {
-    // This effect should run whenever loading or user state changes.
-    console.log('Routing effect triggered:', { user: user?.email, isLoginPage });
+    console.log('Routing effect triggered:', { user: user?.email, isLoginPage, loading });
     if (loading) {
+      console.log('Routing effect: loading, so doing nothing.');
       return; // Don't do anything until auth state is resolved
     }
 
     if (user && isLoginPage) {
-      console.log('User is logged in on login page, redirecting to /');
+      console.log('Routing effect: User is logged in on login page, redirecting to /');
       router.replace('/');
     } else if (!user && !isLoginPage) {
-      console.log('User is not logged in, redirecting to /login');
+      console.log('Routing effect: User is not logged in, redirecting to /login');
       router.replace('/login');
+    } else {
+      console.log('Routing effect: No redirect condition met.');
     }
   }, [user, isLoginPage, loading, router]);
 
@@ -142,26 +154,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('Auth not ready, showing loading screen.');
     return <AuthLoading />;
   }
-
-  if (user && !isLoginPage) {
-    return (
-        <AuthContext.Provider value={contextValue}>
-            <AppLayout>{children}</AppLayout>
-        </AuthContext.Provider>
-    );
-  }
-
-  if (!user && isLoginPage) {
-      return (
-        <AuthContext.Provider value={contextValue}>
-            {children}
-        </AuthContext.Provider>
-    );
-  }
   
-  // This handles the transitional state where redirects are about to happen.
-  // Showing the loading screen prevents content flashing.
-  return <AuthLoading />;
+  if (!user && !isLoginPage) {
+    console.log('Not logged in and not on login page, showing loading screen to wait for redirect.');
+    return <AuthLoading />;
+  }
+
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {user && !isLoginPage ? (
+        <AppLayout>{children}</AppLayout>
+      ) : (
+        children
+      )}
+    </AuthContext.Provider>
+  );
 }
 
 export const useAuth = () => {
