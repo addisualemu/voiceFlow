@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isLoginPage = pathname === '/login';
 
   useEffect(() => {
-    console.log('Routing effect triggered:', { user: user?.email, isLoginPage, loading });
+    console.log('Routing effect triggered:', { user, isLoginPage, loading });
     if (loading) {
       console.log('Routing effect: loading, so doing nothing.');
       return; // Don't do anything until auth state is resolved
@@ -148,8 +148,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, isLoginPage, loading, router]);
 
 
-  const contextValue = { user, loading, signInWithGoogle, signOut };
-
   if (loading) {
     console.log('Auth not ready, showing loading screen.');
     return <AuthLoading />;
@@ -161,12 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {user && !isLoginPage ? (
-        <AppLayout>{children}</AppLayout>
-      ) : (
-        children
-      )}
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+      {user && !isLoginPage ? <AppLayout>{children}</AppLayout> : children}
     </AuthContext.Provider>
   );
 }
