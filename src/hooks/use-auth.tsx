@@ -48,59 +48,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!auth || !db) return;
 
-    // This combined effect handles both the redirect result and auth state changes.
-    const processAuth = async () => {
-        console.log('Starting auth processing...');
-        try {
-            console.log('Calling getRedirectResult...');
-            const result = await getRedirectResult(auth);
-            if (result && result.user) {
-                console.log('Redirect result obtained:', result.user.email);
-                const user = result.user;
-                const userRef = doc(db, 'users', user.uid);
-                console.log('Checking for user document...');
-                const docSnap = await getDoc(userRef);
-                if (!docSnap.exists()) {
-                    console.log('User document does not exist, creating...');
-                    await setDoc(userRef, {
-                        uid: user.uid,
-                        email: user.email,
-                        displayName: user.displayName,
-                        photoURL: user.photoURL,
-                        createdAt: serverTimestamp(),
-                    });
-                     console.log('User document created.');
-                } else {
-                    console.log('User document already exists.');
-                }
-            } else {
-                console.log('No redirect result or no user in result.');
-            }
-        } catch (error) {
-            console.error("Error processing redirect result:", error);
+    console.log('Starting auth processing...');
+    // This function will handle user creation.
+    const handleUser = async (user: User) => {
+        const userRef = doc(db, 'users', user.uid);
+        console.log('Checking for user document...');
+        const docSnap = await getDoc(userRef);
+        if (!docSnap.exists()) {
+            console.log('User document does not exist, creating...');
+            await setDoc(userRef, {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                createdAt: serverTimestamp(),
+            });
+            console.log('User document created.');
+        } else {
+            console.log('User document already exists.');
         }
-
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            console.log('onAuthStateChanged triggered. User:', user?.email);
-            setUser(user);
-            setLoading(false);
-            console.log('State updated: user set, loading set to false.');
-        });
-
-        return () => {
-             console.log('Unsubscribing from onAuthStateChanged');
-             unsubscribe();
-        };
     };
+    
+    // First, try to process the redirect result.
+    console.log('Calling getRedirectResult...');
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          console.log('Redirect result obtained:', result.user.email);
+          handleUser(result.user);
+        } else {
+            console.log('No redirect result or no user in result.');
+        }
+      })
+      .catch((error) => {
+        console.error("Error processing redirect result:", error);
+      });
 
-    const unsubscribePromise = processAuth();
+    // Then, set up the onAuthStateChanged listener.
+    // This will fire after getRedirectResult completes and for any subsequent auth changes.
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        console.log('onAuthStateChanged triggered. User:', user?.email);
+        setUser(user);
+        setLoading(false);
+        console.log('State updated: user set, loading set to false.');
+    });
 
     return () => {
-        unsubscribePromise.then(unsubscribe => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-        });
+         console.log('Unsubscribing from onAuthStateChanged');
+         unsubscribe();
     };
   }, [auth, db]);
 
@@ -121,7 +116,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Signing out...');
       await firebaseSignOut(auth);
       console.log('Sign out successful.');
-      // No need to explicitly set user to null, onAuthStateChanged will handle it
     } catch (error) {
       console.error("Error signing out: ", error);
     }
@@ -133,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('Routing effect triggered:', { user, isLoginPage, loading });
     if (loading) {
       console.log('Routing effect: loading, so doing nothing.');
-      return; // Don't do anything until auth state is resolved
+      return;
     }
 
     if (user && isLoginPage) {
