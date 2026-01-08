@@ -111,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     try {
       await firebaseSignOut(auth);
-      setUser(null); // Explicitly set user to null on sign out
+      // No need to explicitly set user to null, onAuthStateChanged will handle it
     } catch (error) {
       console.error("Error signing out: ", error);
     }
@@ -120,14 +120,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isLoginPage = pathname === '/login';
 
   useEffect(() => {
-    if (loading) return; // Don't do anything until auth state is resolved
+    // This effect should run whenever loading or user state changes.
     console.log('Routing effect triggered:', { user: user?.email, isLoginPage });
+    if (loading) {
+      return; // Don't do anything until auth state is resolved
+    }
+
     if (user && isLoginPage) {
-        console.log('User is logged in on login page, redirecting to /');
-        router.replace('/');
+      console.log('User is logged in on login page, redirecting to /');
+      router.replace('/');
     } else if (!user && !isLoginPage) {
-        console.log('User is not logged in, redirecting to /login');
-        router.replace('/login');
+      console.log('User is not logged in, redirecting to /login');
+      router.replace('/login');
     }
   }, [user, isLoginPage, loading, router]);
 
@@ -155,8 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }
   
-  // This handles the case where the user is not logged in and not on the login page,
-  // or is logged in and on the login page, while the redirect is in progress.
+  // This handles the transitional state where redirects are about to happen.
+  // Showing the loading screen prevents content flashing.
   return <AuthLoading />;
 }
 
