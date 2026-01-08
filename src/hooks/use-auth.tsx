@@ -69,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     });
                 }
                 // The onAuthStateChanged listener below will handle setting the user state
+                // and we don't need to manually set it here.
             }
         } catch (error) {
             console.error("Error processing redirect result:", error);
