@@ -20,6 +20,7 @@ import {
   Book,
   Archive,
   LogOut,
+  FolderKanban,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -31,6 +32,7 @@ const navItems = [
   { href: '/', label: 'My Day', icon: LayoutDashboard },
   { href: '/entry', label: 'Entry', icon: Inbox },
   { href: '/incubate', label: 'Incubate', icon: Hourglass },
+  { href: '/project', label: 'Project', icon: FolderKanban },
   { href: '/reference', label: 'Reference', icon: Book },
   { href: '/archive', label: 'Archive', icon: Archive },
 ];

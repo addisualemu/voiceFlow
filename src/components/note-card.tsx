@@ -7,7 +7,7 @@ import { MoreVertical, Trash2, Edit, ChevronDown, ChevronUp } from 'lucide-react
 import type { Task, Stage } from "@/lib/types";
 import { STAGES, STAGE_LABELS } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -24,6 +24,17 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent } from './ui/card';
 import { cn } from '@/lib/utils';
+import { ActionableTaskDialog } from '@/components/actionable-task-dialog';
+
+// Stage transition mapping - defines which stages a task can move to from each stage
+const STAGE_TRANSITIONS: Record<Stage, Stage[]> = {
+  Entry: ['Incubate', 'Reference', 'Archive', 'Project', 'Actionable'],
+  Incubate: ['Reference', 'Archive', 'Project', 'Actionable'],
+  Reference: ['Archive'],
+  Archive: [],
+  Project: [],
+  Actionable: [],
+};
 
 interface TaskCardProps {
   task: Task;
@@ -34,9 +45,18 @@ interface TaskCardProps {
 
 export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true }: TaskCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showActionableDialog, setShowActionableDialog] = useState(false);
+  const [pendingTask, setPendingTask] = useState<Task | null>(null);
 
   const handleStageChange = (stage: Stage) => {
-    onUpdate(task.id, { stage });
+    if (stage === 'Actionable') {
+      // Intercept and show dialog
+      setPendingTask(task);
+      setShowActionableDialog(true);
+    } else {
+      // Direct update for other stages
+      onUpdate(task.id, { stage });
+    }
   };
   
   const handleCompleteToggle = () => {
@@ -88,22 +108,6 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
                     </DropdownMenuItem>
-
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Change Stage</DropdownMenuSubTrigger>
-                      <DropdownMenuPortal>
-                          <DropdownMenuSubContent>
-                          <DropdownMenuLabel>Move to</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          {STAGES.map(stage => (
-                              <DropdownMenuItem key={stage} onClick={() => handleStageChange(stage)}>
-                              {STAGE_LABELS[stage]}
-                              </DropdownMenuItem>
-                          ))}
-                          </DropdownMenuSubContent>
-                      </DropdownMenuPortal>
-                    </DropdownMenuSub>
-
                     <DropdownMenuSeparator />
                     <AlertDialogTrigger asChild>
                       <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
@@ -136,13 +140,43 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
         <CollapsibleContent>
             <CardContent className="px-12 py-2 break-words">
                 {details.length > 0 && <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-2">{details.join('\n')}</p>}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <Badge variant="secondary">{STAGE_LABELS[task.stage]}</Badge>
-                    <span>{formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}</span>
+                <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-1.5">
+                        {STAGE_TRANSITIONS[task.stage].map(stage => (
+                            <Button
+                                key={stage}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStageChange(stage)}
+                                className="text-xs h-8 px-2.5"
+                                aria-label={`Move to ${STAGE_LABELS[stage]}`}
+                            >
+                                {STAGE_LABELS[stage]}
+                            </Button>
+                        ))}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
+                    </span>
                 </div>
             </CardContent>
         </CollapsibleContent>
       </Card>
+
+      {/* Actionable Task Configuration Dialog */}
+      <ActionableTaskDialog
+        open={showActionableDialog}
+        onOpenChange={setShowActionableDialog}
+        task={pendingTask || task}
+        onSubmit={(updates) => {
+          onUpdate(task.id, {
+            ...updates,
+            stage: 'Actionable'
+          });
+          setShowActionableDialog(false);
+          setPendingTask(null);
+        }}
+      />
     </Collapsible>
   );
 }

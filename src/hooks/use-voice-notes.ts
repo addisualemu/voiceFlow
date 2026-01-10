@@ -39,8 +39,10 @@ export function useTasks() {
           priority: data.priority,
           context: data.context,
           timeFrame: data.timeFrame,
-          dayOfWeek: data.dayOfWeek,
+          // Backwards compatibility: convert old dayOfWeek to new daysOfWeek array
+          daysOfWeek: data.daysOfWeek || (data.dayOfWeek !== undefined ? [data.dayOfWeek] : undefined),
           dayOfMonth: data.dayOfMonth,
+          repeated: data.repeated,
           alertDateTime: data.alertDateTime,
           deadlineDateTime: data.deadlineDateTime,
           children: data.children,
