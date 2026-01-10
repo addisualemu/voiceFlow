@@ -69,10 +69,11 @@ Voice Input → Entry → [Actionable | Incubate | Reference] → Archive
 - Optional: context, timeFrame, dayOfWeek, dayOfMonth, alertDateTime, deadlineDateTime, priority, children (subtasks)
 - Stage type: 'Entry' | 'Actionable' | 'Incubate' | 'Reference' | 'Archive'
 
-**Current State Storage:**
-- Tasks stored in **localStorage only** (key: 'voiceflow-tasks')
-- NOT yet synced to Firebase/Firestore
+**Task Storage:**
+- Tasks synced with **Firestore** in real-time
+- Stored at: `/users/{uid}/tasks/{taskId}`
 - Managed via `use-voice-notes.ts` hook
+- Real-time updates using Firestore `onSnapshot`
 - No global state library (Redux/Zustand) - uses Context for auth/Firebase only
 
 ### Firebase Integration
@@ -86,6 +87,10 @@ Voice Input → Entry → [Actionable | Incubate | Reference] → Archive
 ```
 /users/{uid}/
   - uid, email, displayName, photoURL, createdAt
+
+  /tasks/{taskId}/
+    - detail, stage, completed, createdAt
+    - Optional: priority, context, timeFrame, etc.
 ```
 
 **Configuration:**
@@ -132,9 +137,10 @@ Voice Input → Entry → [Actionable | Incubate | Reference] → Archive
 - Handles redirect-based Google login
 - Auto route protection
 
-**use-voice-notes.ts**: Task CRUD operations
+**use-voice-notes.ts**: Task CRUD operations with Firestore
 - Provides: tasks, isLoading, addTask(), updateTask(), deleteTask()
-- Storage: localStorage (not Firebase yet)
+- Storage: Firestore with real-time sync
+- Uses `onSnapshot` for live updates
 - Toast notifications on actions
 
 **use-toast.ts**: Toast notification system
@@ -172,9 +178,16 @@ For understanding the codebase, prioritize reading:
 
 ## Key Architectural Decisions
 
-1. **Local-First Data**: Tasks currently stored in localStorage, not yet synced to Firebase
+1. **Real-Time Sync**: Tasks synced with Firestore, live updates across devices
 2. **Authentication-First**: All routes protected except /login
 3. **Client-Side Only**: No server components or API routes currently
 4. **Voice as Primary Input**: Floating mic button on all pages
 5. **Stage-Based Organization**: Tasks filtered by stage across different pages
 6. **Genkit Prepared but Unused**: AI scaffolding in place for future features
+
+## Firestore Security
+
+Security rules are defined in `firestore.rules`:
+- Users can only access their own data
+- All operations require authentication
+- Deploy rules via Firebase Console or CLI (see FIRESTORE_SETUP.md)

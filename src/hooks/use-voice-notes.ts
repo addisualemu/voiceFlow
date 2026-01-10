@@ -2,87 +2,138 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Task, Stage } from '@/lib/types';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import type { Task } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
-
-const LOCAL_STORAGE_KEY = 'voiceflow-tasks';
-
-const initialTasks: Task[] = [
-  { id: '1', detail: 'Brainstorm marketing ideas. We should explore social media campaigns and influencer marketing.', createdAt: Date.now() - 1000 * 60 * 5, stage: 'Actionable', priority: 1, completed: false },
-  { id: '2', detail: 'Weekly team sync feedback. The new sprint planning process is working well. Keep it up.', createdAt: Date.now() - 1000 * 60 * 60 * 2, stage: 'Reference', completed: false },
-  { id: '3', detail: 'Refactor the authentication flow. The current implementation is complex. Need to break it down into smaller, manageable parts. Start with the JWT handling.', createdAt: Date.now() - 1000 * 60 * 60 * 24, stage: 'Actionable', priority: 2, completed: true },
-  { id: '4', detail: 'Grocery list: Milk, eggs, bread, and coffee.', createdAt: Date.now() - 1000 * 60 * 30, stage: 'Entry', completed: false },
-  { id: '5', detail: "API key is expiring. The billing API key needs to be rotated. I'm blocked by finance to get the new key.", createdAt: Date.now() - 1000 * 60 * 60 * 8, stage: 'Incubate', completed: false },
-  { id: '6', detail: 'Follow up with Jane Doe. Send an email to Jane about the Q3 proposal.', createdAt: Date.now() - 1000 * 60 * 60 * 3, stage: 'Actionable', priority: 1, completed: false },
-];
+import { useAuth } from "@/hooks/use-auth";
+import { useFirebase } from "@/components/firebase-provider";
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { db } = useFirebase();
 
+  // Real-time listener for tasks from Firestore
   useEffect(() => {
-    try {
-      const savedTasksJson = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedTasksJson) {
-        const savedTasks = JSON.parse(savedTasksJson);
-        setTasks(savedTasks);
-      } else {
-        setTasks(initialTasks);
-      }
-    } catch (error) {
-      console.error("Failed to load tasks from local storage:", error);
-      setTasks(initialTasks);
-    } finally {
+    if (!user || !db) {
+      setTasks([]);
       setIsLoading(false);
+      return;
     }
-  }, []);
 
-  const saveTasks = useCallback((updatedTasks: Task[]) => {
-    setTasks(updatedTasks);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedTasks));
-    } catch (error) {
-      console.error("Failed to save tasks to local storage:", error);
+    const tasksRef = collection(db, 'users', user.uid, 'tasks');
+    const q = query(tasksRef, orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedTasks: Task[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        loadedTasks.push({
+          id: doc.id,
+          detail: data.detail,
+          stage: data.stage,
+          completed: data.completed,
+          createdAt: data.createdAt?.toMillis?.() || Date.now(),
+          priority: data.priority,
+          context: data.context,
+          timeFrame: data.timeFrame,
+          dayOfWeek: data.dayOfWeek,
+          dayOfMonth: data.dayOfMonth,
+          alertDateTime: data.alertDateTime,
+          deadlineDateTime: data.deadlineDateTime,
+          children: data.children,
+        });
+      });
+      setTasks(loadedTasks);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error loading tasks from Firestore:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not save tasks locally.",
+        description: "Could not load tasks from database.",
+      });
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, db, toast]);
+
+  const addTask = useCallback(async (content: string, title: string) => {
+    if (!user || !db) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to create tasks.",
+      });
+      return;
+    }
+
+    try {
+      const tasksRef = collection(db, 'users', user.uid, 'tasks');
+      await addDoc(tasksRef, {
+        detail: title ? `${title}\n${content}` : content,
+        stage: 'Entry',
+        completed: false,
+        createdAt: serverTimestamp(),
+      });
+
+      toast({
+        title: "Task created!",
+        description: "Your new task has been added.",
+      });
+    } catch (error) {
+      console.error("Error adding task:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not create task.",
       });
     }
-  }, [toast]);
+  }, [user, db, toast]);
 
-  const addTask = useCallback((content: string, title: string) => {
-    const newTask: Task = {
-      id: Date.now().toString(),
-      createdAt: Date.now(),
-      detail: title ? `${title}\n${content}`: content,
-      stage: 'Entry',
-      completed: false,
-    };
-    saveTasks([newTask, ...tasks]);
-    toast({
-      title: "Task created!",
-      description: "Your new task has been added.",
-    });
-  }, [tasks, saveTasks, toast]);
+  const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
+    if (!user || !db) return;
 
-  const updateTask = useCallback((id: string, updates: Partial<Task>) => {
-    const updatedTasks = tasks.map(task =>
-      task.id === id ? { ...task, ...updates } : task
-    );
-    saveTasks(updatedTasks);
-  }, [tasks, saveTasks]);
+    try {
+      const taskRef = doc(db, 'users', user.uid, 'tasks', id);
 
-  const deleteTask = useCallback((id: string) => {
-    const updatedTasks = tasks.filter(task => task.id !== id);
-    saveTasks(updatedTasks);
-    toast({
-      title: "Task deleted",
-      description: "The task has been removed.",
-    });
-  }, [tasks, saveTasks, toast]);
-  
+      // Remove id and createdAt from updates if present (they shouldn't be updated)
+      const { id: _, createdAt, ...updateData } = updates as any;
+
+      await updateDoc(taskRef, updateData);
+    } catch (error) {
+      console.error("Error updating task:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not update task.",
+      });
+    }
+  }, [user, db, toast]);
+
+  const deleteTask = useCallback(async (id: string) => {
+    if (!user || !db) return;
+
+    try {
+      const taskRef = doc(db, 'users', user.uid, 'tasks', id);
+      await deleteDoc(taskRef);
+
+      toast({
+        title: "Task deleted",
+        description: "The task has been removed.",
+      });
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not delete task.",
+      });
+    }
+  }, [user, db, toast]);
 
   return {
     tasks,
