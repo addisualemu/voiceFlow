@@ -9,3 +9,19 @@ export const firebaseConfig: FirebaseOptions = {
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
+
+// Validate that all required Firebase config values are present
+const requiredConfigKeys: (keyof FirebaseOptions)[] = [
+    'apiKey',
+    'authDomain',
+    'projectId',
+    'storageBucket',
+    'messagingSenderId',
+    'appId',
+];
+
+const missingKeys = requiredConfigKeys.filter(key => !firebaseConfig[key]);
+if (missingKeys.length > 0) {
+    console.error('Missing Firebase config values:', missingKeys);
+    console.error('Please check your .env.local file');
+}

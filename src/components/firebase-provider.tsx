@@ -23,14 +23,20 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     let auth: Auth;
     let db: Firestore;
 
-    if (!getApps().length) {
-      app = initializeApp(firebaseConfig);
-    } else {
-      app = getApps()[0];
+    try {
+      if (!getApps().length) {
+        app = initializeApp(firebaseConfig);
+      } else {
+        app = getApps()[0];
+      }
+
+      auth = getAuth(app);
+      db = getFirestore(app);
+
+      setFirebase({ app, auth, db });
+    } catch (error) {
+      console.error('Error initializing Firebase:', error);
     }
-    auth = getAuth(app);
-    db = getFirestore(app);
-    setFirebase({ app, auth, db });
   }, []);
 
   if (!firebase) {

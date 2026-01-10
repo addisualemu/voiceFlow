@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { onAuthStateChanged, type User, GoogleAuthProvider, signInWithRedirect, signOut as firebaseSignOut, getRedirectResult } from 'firebase/auth';
+import { onAuthStateChanged, type User, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,116 +39,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  console.log('AuthProvider render:', {
-    loading,
-    user: user?.email,
-    pathname,
-  });
 
   useEffect(() => {
-    if (!auth || !db) return;
+    if (!auth) return;
 
-    console.log('Starting auth processing...');
-    // This function will handle user creation.
-    const handleUser = async (user: User) => {
-        const userRef = doc(db, 'users', user.uid);
-        console.log('Checking for user document...');
-        const docSnap = await getDoc(userRef);
-        if (!docSnap.exists()) {
-            console.log('User document does not exist, creating...');
-            await setDoc(userRef, {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-                createdAt: serverTimestamp(),
-            });
-            console.log('User document created.');
-        } else {
-            console.log('User document already exists.');
-        }
-    };
-    
-    // First, try to process the redirect result.
-    console.log('Calling getRedirectResult...');
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result && result.user) {
-          console.log('Redirect result obtained:', result.user.email);
-          handleUser(result.user);
-        } else {
-            console.log('No redirect result or no user in result.');
-        }
-      })
-      .catch((error) => {
-        console.error("Error processing redirect result:", error);
-      });
-
-    // Then, set up the onAuthStateChanged listener.
-    // This will fire after getRedirectResult completes and for any subsequent auth changes.
+    // Set up the onAuthStateChanged listener
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-        console.log('onAuthStateChanged triggered. User:', user?.email);
         setUser(user);
         setLoading(false);
-        console.log('State updated: user set, loading set to false.');
     });
 
-    return () => {
-         console.log('Unsubscribing from onAuthStateChanged');
-         unsubscribe();
-    };
-  }, [auth, db]);
+    return () => unsubscribe();
+  }, [auth]);
 
   const signInWithGoogle = async () => {
-    if (!auth) return;
+    if (!auth || !db) {
+      alert('Authentication is not initialized. Please refresh the page.');
+      return;
+    }
+
     const provider = new GoogleAuthProvider();
+
     try {
-      console.log('Initiating signInWithRedirect...');
-      await signInWithRedirect(auth, provider);
-    } catch (error) {
-      console.error("Error signing in with Google: ", error);
+      const result = await signInWithPopup(auth, provider);
+
+      // Create user document in Firestore if it doesn't exist
+      const userRef = doc(db, 'users', result.user.uid);
+      const docSnap = await getDoc(userRef);
+
+      if (!docSnap.exists()) {
+        await setDoc(userRef, {
+          uid: result.user.uid,
+          email: result.user.email,
+          displayName: result.user.displayName,
+          photoURL: result.user.photoURL,
+          createdAt: serverTimestamp(),
+        });
+      }
+    } catch (error: any) {
+      console.error("Error signing in with Google:", error);
+
+      if (error?.code === 'auth/popup-blocked') {
+        alert('Popup was blocked! Please allow popups for this site in your browser settings.');
+      } else if (error?.code === 'auth/popup-closed-by-user') {
+        // User closed popup, no need to show error
+        return;
+      } else {
+        alert(`Sign-in error: ${error?.message || 'Unknown error'}`);
+      }
     }
   };
 
   const signOut = async () => {
     if (!auth) return;
     try {
-      console.log('Signing out...');
       await firebaseSignOut(auth);
-      console.log('Sign out successful.');
     } catch (error) {
-      console.error("Error signing out: ", error);
+      console.error("Error signing out:", error);
     }
   };
   
   const isLoginPage = pathname === '/login';
 
   useEffect(() => {
-    console.log('Routing effect triggered:', { user, isLoginPage, loading });
-    if (loading) {
-      console.log('Routing effect: loading, so doing nothing.');
-      return;
-    }
+    if (loading) return;
 
     if (user && isLoginPage) {
-      console.log('Routing effect: User is logged in on login page, redirecting to /');
       router.replace('/');
     } else if (!user && !isLoginPage) {
-      console.log('Routing effect: User is not logged in, redirecting to /login');
       router.replace('/login');
-    } else {
-      console.log('Routing effect: No redirect condition met.');
     }
   }, [user, isLoginPage, loading, router]);
 
-
   if (loading) {
-    console.log('Auth not ready, showing loading screen.');
     return <AuthLoading />;
   }
-  
+
   if (!user && !isLoginPage) {
-    console.log('Not logged in and not on login page, showing loading screen to wait for redirect.');
     return <AuthLoading />;
   }
 

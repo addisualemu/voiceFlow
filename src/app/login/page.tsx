@@ -17,9 +17,9 @@ export default function LoginPage() {
           <CardDescription>Sign in to capture your thoughts and organize your life.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button 
-            className="w-full" 
-            onClick={signInWithGoogle} 
+          <Button
+            className="w-full"
+            onClick={signInWithGoogle}
             disabled={loading}
           >
             <Chrome className="mr-2 h-4 w-4" />
