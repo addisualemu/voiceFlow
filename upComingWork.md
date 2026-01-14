@@ -1,3 +1,13 @@
+select good place for the alert after new entry
+
+edit should edit the description and title
+setting for context and others
+import export data
+priority algorithm
+
+
+DONE +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 Work on transition 
 - transiton from stage to satgae should show popup on what to do or describ or set alame
 
@@ -16,6 +26,6 @@ If a task can not be done before specific date , it should be moved to incubate.
 work on edit 
 exit shoud come when edit context menu clickd.
 
-select good place for the alert after new entry
+
 
 default page should be My day: not Entry  -- add new should move it to entry

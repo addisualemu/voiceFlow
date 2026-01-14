@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/use-auth';
 import { FirebaseProvider } from '@/components/firebase-provider';
+import { CurrentContextProvider } from '@/components/current-context-provider';
 
 export const metadata: Metadata = {
   title: 'VoiceFlow',
@@ -30,7 +31,11 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <FirebaseProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <CurrentContextProvider>
+              {children}
+            </CurrentContextProvider>
+          </AuthProvider>
         </FirebaseProvider>
         <Toaster />
       </body>
