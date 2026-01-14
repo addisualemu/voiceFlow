@@ -1,11 +1,11 @@
 
 priority algorithm
 edit should edit the description and title
-import export data
-setting for context and others
+ export data
 
 DONE +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+setting for context and others
 select good place for the alert after new entry
 
 Work on transition 

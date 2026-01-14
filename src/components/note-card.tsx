@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { MoreVertical, Trash2, Edit, ChevronDown, ChevronUp } from 'lucide-react';
+import { MoreVertical, Trash2, Edit, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import type { Task, Stage } from "@/lib/types";
 import { STAGES, STAGE_LABELS } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { Card, CardContent } from './ui/card';
 import { cn } from '@/lib/utils';
 import { ActionableTaskDialog } from '@/components/actionable-task-dialog';
 import { DateSettingsDialog } from '@/components/date-settings-dialog';
+import { TaskEditDialog } from '@/components/task-edit-dialog';
 
 // Stage transition mapping - defines which stages a task can move to from each stage
 const STAGE_TRANSITIONS: Record<Stage, Stage[]> = {
@@ -48,6 +49,7 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
   const [isOpen, setIsOpen] = useState(false);
   const [showActionableDialog, setShowActionableDialog] = useState(false);
   const [showDateDialog, setShowDateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [pendingTask, setPendingTask] = useState<Task | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [tempFormValues, setTempFormValues] = useState<any>(null);
@@ -71,6 +73,15 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
   };
 
   const handleEdit = () => {
+    // Close dropdown first
+    setDropdownOpen(false);
+    // Wait for dropdown to close before opening dialog
+    setTimeout(() => {
+      setShowEditDialog(true);
+    }, 150);
+  };
+
+  const handleConfigure = () => {
     setIsEditMode(true);
     // Close dropdown first
     setDropdownOpen(false);
@@ -78,6 +89,10 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
     setTimeout(() => {
       setShowActionableDialog(true);
     }, 150);
+  };
+
+  const handleEditTaskDetail = (newDetail: string) => {
+    onUpdate(task.id, { detail: newDetail });
   };
   
   const handleCompleteToggle = () => {
@@ -127,8 +142,14 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleEdit}>
                         <Edit className="mr-2 h-4 w-4" />
-                        Edit
+                        Edit Task
                     </DropdownMenuItem>
+                    {task.stage === 'Actionable' && (
+                      <DropdownMenuItem onClick={handleConfigure}>
+                        <Settings2 className="mr-2 h-4 w-4" />
+                        Configure
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <AlertDialogTrigger asChild>
                       <DropdownMenuItem
@@ -278,6 +299,14 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
           }}
         />
       )}
+
+      {/* Task Edit Dialog */}
+      <TaskEditDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        task={task}
+        onSubmit={handleEditTaskDetail}
+      />
     </Collapsible>
   );
 }
