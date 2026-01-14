@@ -34,7 +34,6 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { DaysOfWeekSelector } from "@/components/actionable-task-dialog/days-of-week-selector";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useContexts } from "@/hooks/use-contexts";
-import { DateSettingsDialog } from "@/components/date-settings-dialog";
 import type { Task, TimeOfDay } from "@/lib/types";
 
 // Form schema with validation
@@ -64,24 +63,22 @@ const actionableTaskSchema = z.object({
   path: ["timeFrameEnd"],
 });
 
-type FormValues = z.infer<typeof actionableTaskSchema>;
+export type FormValues = z.infer<typeof actionableTaskSchema>;
 
 export interface ActionableTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: Task;
-  onSubmit: (updates: Partial<Task>) => void;
+  onNext: (formValues: FormValues) => void;
 }
 
 export function ActionableTaskDialog({
   open,
   onOpenChange,
   task,
-  onSubmit,
+  onNext,
 }: ActionableTaskDialogProps) {
   const { contexts, isLoading: contextsLoading } = useContexts();
-  const [showDateDialog, setShowDateDialog] = React.useState(false);
-  const [tempFormValues, setTempFormValues] = React.useState<FormValues | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(actionableTaskSchema),
@@ -102,69 +99,44 @@ export function ActionableTaskDialog({
   const hasSchedule = (timeFrameStart || timeFrameEnd) || (daysOfWeek && daysOfWeek.length > 0);
 
   const handleNext = (values: FormValues) => {
-    // Store form values temporarily
-    setTempFormValues(values);
-    // Close this dialog and open date settings dialog
-    onOpenChange(false);
-    setShowDateDialog(true);
-  };
-
-  const handleDateSubmit = (dates: { alertDateTime?: number; deadlineDateTime?: number }) => {
-    if (!tempFormValues) return;
-
-    // Find the context object from the name
-    const contextObj = tempFormValues.context
-      ? contexts.find(c => c.name === tempFormValues.context)
+    // Find the context object from the name and build the update object
+    const contextObj = values.context
+      ? contexts.find(c => c.name === values.context)
       : undefined;
 
     // Build updates object, only including fields with actual values
-    const updates: Partial<Task> = {};
+    const updates: any = {};
 
     // Only add fields if they have values (avoid undefined in Firestore)
     if (contextObj) {
       updates.context = contextObj;
     }
 
-    if (tempFormValues.timeFrameStart && tempFormValues.timeFrameEnd) {
+    if (values.timeFrameStart && values.timeFrameEnd) {
       updates.timeFrame = {
-        start: tempFormValues.timeFrameStart,
-        end: tempFormValues.timeFrameEnd,
+        start: values.timeFrameStart,
+        end: values.timeFrameEnd,
       };
     }
 
-    if (tempFormValues.daysOfWeek && tempFormValues.daysOfWeek.length > 0) {
-      updates.daysOfWeek = tempFormValues.daysOfWeek;
+    if (values.daysOfWeek && values.daysOfWeek.length > 0) {
+      updates.daysOfWeek = values.daysOfWeek;
     }
 
-    if (tempFormValues.repeated !== undefined) {
-      updates.repeated = tempFormValues.repeated;
+    if (values.repeated !== undefined) {
+      updates.repeated = values.repeated;
     }
 
-    if (dates.alertDateTime) {
-      updates.alertDateTime = dates.alertDateTime;
+    if (values.priority) {
+      updates.priority = values.priority;
     }
 
-    if (dates.deadlineDateTime) {
-      updates.deadlineDateTime = dates.deadlineDateTime;
-    }
-
-    if (tempFormValues.priority) {
-      updates.priority = tempFormValues.priority;
-    }
-
-    onSubmit(updates);
-    setTempFormValues(null);
-    setShowDateDialog(false);
-  };
-
-  const handleBackToMain = () => {
-    setShowDateDialog(false);
-    onOpenChange(true);
+    // Pass the processed values to parent
+    onNext(updates);
   };
 
   const handleCancel = () => {
     form.reset();
-    setTempFormValues(null);
     onOpenChange(false);
   };
 
@@ -357,13 +329,6 @@ export function ActionableTaskDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
-      <DateSettingsDialog
-        open={showDateDialog}
-        onOpenChange={setShowDateDialog}
-        task={task}
-        onSubmit={handleDateSubmit}
-        onBack={handleBackToMain}
-      />
     </Dialog>
   );
 }

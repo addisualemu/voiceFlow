@@ -25,6 +25,7 @@ import {
 import { Card, CardContent } from './ui/card';
 import { cn } from '@/lib/utils';
 import { ActionableTaskDialog } from '@/components/actionable-task-dialog';
+import { DateSettingsDialog } from '@/components/date-settings-dialog';
 
 // Stage transition mapping - defines which stages a task can move to from each stage
 const STAGE_TRANSITIONS: Record<Stage, Stage[]> = {
@@ -46,17 +47,37 @@ interface TaskCardProps {
 export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true }: TaskCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showActionableDialog, setShowActionableDialog] = useState(false);
+  const [showDateDialog, setShowDateDialog] = useState(false);
   const [pendingTask, setPendingTask] = useState<Task | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [tempFormValues, setTempFormValues] = useState<any>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleStageChange = (stage: Stage) => {
     if (stage === 'Actionable') {
       // Intercept and show dialog
       setPendingTask(task);
-      setShowActionableDialog(true);
+      // Ensure dropdown is closed
+      setDropdownOpen(false);
+      setIsEditMode(false);
+      // Small delay to ensure any open dropdown closes
+      setTimeout(() => {
+        setShowActionableDialog(true);
+      }, 100);
     } else {
       // Direct update for other stages
       onUpdate(task.id, { stage });
     }
+  };
+
+  const handleEdit = () => {
+    setIsEditMode(true);
+    // Close dropdown first
+    setDropdownOpen(false);
+    // Wait for dropdown to close before opening dialog
+    setTimeout(() => {
+      setShowActionableDialog(true);
+    }, 150);
   };
   
   const handleCompleteToggle = () => {
@@ -95,7 +116,7 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
               </div>
             </CollapsibleTrigger>
              <AlertDialog>
-                <DropdownMenu>
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 ml-2">
                         <MoreVertical className="h-4 w-4" />
@@ -104,13 +125,19 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
                     <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleEdit}>
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <AlertDialogTrigger asChild>
-                      <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setDropdownOpen(false);
+                        }}
+                      >
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
                       </DropdownMenuItem>
                     </AlertDialogTrigger>
@@ -164,19 +191,93 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
       </Card>
 
       {/* Actionable Task Configuration Dialog */}
-      <ActionableTaskDialog
-        open={showActionableDialog}
-        onOpenChange={setShowActionableDialog}
-        task={pendingTask || task}
-        onSubmit={(updates) => {
-          onUpdate(task.id, {
-            ...updates,
-            stage: 'Actionable'
-          });
-          setShowActionableDialog(false);
-          setPendingTask(null);
-        }}
-      />
+      {showActionableDialog && (
+        <ActionableTaskDialog
+          open={showActionableDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              // Clean up when dialog closes
+              setShowActionableDialog(false);
+              if (!showDateDialog) {
+                setPendingTask(null);
+                setIsEditMode(false);
+                setTempFormValues(null);
+              }
+            }
+          }}
+          task={pendingTask || task}
+          onNext={(formValues) => {
+            // Store form values
+            setTempFormValues(formValues);
+            setShowActionableDialog(false);
+
+            // Wait for dialog to close before opening next one
+            setTimeout(() => {
+              setShowDateDialog(true);
+            }, 150);
+          }}
+        />
+      )}
+
+      {/* Date Settings Dialog */}
+      {showDateDialog && (
+        <DateSettingsDialog
+          open={showDateDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              // Clean up when dialog closes
+              setShowDateDialog(false);
+              setTempFormValues(null);
+              setPendingTask(null);
+              setIsEditMode(false);
+              setDropdownOpen(false);
+            }
+          }}
+          task={pendingTask || task}
+          onSubmit={(dates) => {
+            if (!tempFormValues) return;
+
+            // Combine form values with dates, only including defined values
+            const updates = { ...tempFormValues };
+
+            // Only add date fields if they have values (avoid undefined in Firestore)
+            if (dates.alertDateTime !== undefined) {
+              updates.alertDateTime = dates.alertDateTime;
+            }
+
+            if (dates.deadlineDateTime !== undefined) {
+              updates.deadlineDateTime = dates.deadlineDateTime;
+            }
+
+            // If in edit mode, don't change the stage
+            if (isEditMode) {
+              onUpdate(task.id, updates);
+            } else {
+              // If moving to Actionable, set the stage
+              onUpdate(task.id, {
+                ...updates,
+                stage: 'Actionable'
+              });
+            }
+
+            // Clean up all state
+            setShowDateDialog(false);
+            setShowActionableDialog(false);
+            setPendingTask(null);
+            setIsEditMode(false);
+            setTempFormValues(null);
+            setDropdownOpen(false);
+          }}
+          onBack={() => {
+            setShowDateDialog(false);
+
+            // Wait for dialog to close before opening the previous one
+            setTimeout(() => {
+              setShowActionableDialog(true);
+            }, 150);
+          }}
+        />
+      )}
     </Collapsible>
   );
 }
