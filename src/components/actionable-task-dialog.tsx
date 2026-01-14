@@ -31,10 +31,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { TimePicker } from "@/components/ui/time-picker";
-import { DatePicker } from "@/components/ui/date-picker";
 import { DaysOfWeekSelector } from "@/components/actionable-task-dialog/days-of-week-selector";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useContexts } from "@/hooks/use-contexts";
+import { DateSettingsDialog } from "@/components/date-settings-dialog";
 import type { Task, TimeOfDay } from "@/lib/types";
 
 // Form schema with validation
@@ -50,8 +50,6 @@ const actionableTaskSchema = z.object({
   }).optional(),
   daysOfWeek: z.array(z.number().min(0).max(6)).optional(),
   repeated: z.boolean().optional(),
-  alertDateTime: z.number().optional(),
-  deadlineDateTime: z.number().optional(),
   priority: z.number().min(1).max(4).optional(),
 }).refine((data) => {
   // Validate end time is after start time
@@ -64,15 +62,6 @@ const actionableTaskSchema = z.object({
 }, {
   message: "End time must be after start time",
   path: ["timeFrameEnd"],
-}).refine((data) => {
-  // Validate deadline is after alert
-  if (data.alertDateTime && data.deadlineDateTime) {
-    return data.deadlineDateTime > data.alertDateTime;
-  }
-  return true;
-}, {
-  message: "Deadline must be after alert time",
-  path: ["deadlineDateTime"],
 });
 
 type FormValues = z.infer<typeof actionableTaskSchema>;
@@ -91,6 +80,8 @@ export function ActionableTaskDialog({
   onSubmit,
 }: ActionableTaskDialogProps) {
   const { contexts, isLoading: contextsLoading } = useContexts();
+  const [showDateDialog, setShowDateDialog] = React.useState(false);
+  const [tempFormValues, setTempFormValues] = React.useState<FormValues | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(actionableTaskSchema),
@@ -100,8 +91,6 @@ export function ActionableTaskDialog({
       timeFrameEnd: task.timeFrame?.end,
       daysOfWeek: task.daysOfWeek || [],
       repeated: task.repeated || false,
-      alertDateTime: task.alertDateTime,
-      deadlineDateTime: task.deadlineDateTime,
       priority: task.priority || 2, // Default to Normal
     },
   });
@@ -112,33 +101,70 @@ export function ActionableTaskDialog({
   const daysOfWeek = form.watch("daysOfWeek");
   const hasSchedule = (timeFrameStart || timeFrameEnd) || (daysOfWeek && daysOfWeek.length > 0);
 
-  // Watch alertDateTime for deadline validation
-  const alertDateTime = form.watch("alertDateTime");
+  const handleNext = (values: FormValues) => {
+    // Store form values temporarily
+    setTempFormValues(values);
+    // Close this dialog and open date settings dialog
+    onOpenChange(false);
+    setShowDateDialog(true);
+  };
 
-  const handleSubmit = (values: FormValues) => {
+  const handleDateSubmit = (dates: { alertDateTime?: number; deadlineDateTime?: number }) => {
+    if (!tempFormValues) return;
+
     // Find the context object from the name
-    const contextObj = values.context
-      ? contexts.find(c => c.name === values.context)
+    const contextObj = tempFormValues.context
+      ? contexts.find(c => c.name === tempFormValues.context)
       : undefined;
 
-    const updates: Partial<Task> = {
-      context: contextObj,
-      timeFrame: (values.timeFrameStart && values.timeFrameEnd) ? {
-        start: values.timeFrameStart,
-        end: values.timeFrameEnd,
-      } : undefined,
-      daysOfWeek: values.daysOfWeek && values.daysOfWeek.length > 0 ? values.daysOfWeek : undefined,
-      repeated: values.repeated,
-      alertDateTime: values.alertDateTime,
-      deadlineDateTime: values.deadlineDateTime,
-      priority: values.priority,
-    };
+    // Build updates object, only including fields with actual values
+    const updates: Partial<Task> = {};
+
+    // Only add fields if they have values (avoid undefined in Firestore)
+    if (contextObj) {
+      updates.context = contextObj;
+    }
+
+    if (tempFormValues.timeFrameStart && tempFormValues.timeFrameEnd) {
+      updates.timeFrame = {
+        start: tempFormValues.timeFrameStart,
+        end: tempFormValues.timeFrameEnd,
+      };
+    }
+
+    if (tempFormValues.daysOfWeek && tempFormValues.daysOfWeek.length > 0) {
+      updates.daysOfWeek = tempFormValues.daysOfWeek;
+    }
+
+    if (tempFormValues.repeated !== undefined) {
+      updates.repeated = tempFormValues.repeated;
+    }
+
+    if (dates.alertDateTime) {
+      updates.alertDateTime = dates.alertDateTime;
+    }
+
+    if (dates.deadlineDateTime) {
+      updates.deadlineDateTime = dates.deadlineDateTime;
+    }
+
+    if (tempFormValues.priority) {
+      updates.priority = tempFormValues.priority;
+    }
 
     onSubmit(updates);
+    setTempFormValues(null);
+    setShowDateDialog(false);
+  };
+
+  const handleBackToMain = () => {
+    setShowDateDialog(false);
+    onOpenChange(true);
   };
 
   const handleCancel = () => {
     form.reset();
+    setTempFormValues(null);
     onOpenChange(false);
   };
 
@@ -154,7 +180,7 @@ export function ActionableTaskDialog({
 
         <ScrollArea className="max-h-[calc(90vh-180px)] px-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4">
+            <form onSubmit={form.handleSubmit(handleNext)} className="space-y-6 py-4">
               {/* Context */}
               <FormField
                 control={form.control}
@@ -284,51 +310,6 @@ export function ActionableTaskDialog({
                 />
               )}
 
-              {/* Alert Date */}
-              <FormField
-                control={form.control}
-                name="alertDateTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Alert Date</FormLabel>
-                    <FormControl>
-                      <DatePicker
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Set alert date (optional)"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      When should you be alerted if this isn't complete?
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Deadline */}
-              <FormField
-                control={form.control}
-                name="deadlineDateTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Deadline</FormLabel>
-                    <FormControl>
-                      <DatePicker
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Set deadline (optional)"
-                        minDate={alertDateTime ? new Date(alertDateTime) : undefined}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      When does this task fail if not completed?
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {/* Priority */}
               <FormField
                 control={form.control}
@@ -370,12 +351,19 @@ export function ActionableTaskDialog({
           </Button>
           <Button
             type="submit"
-            onClick={form.handleSubmit(handleSubmit)}
+            onClick={form.handleSubmit(handleNext)}
           >
-            Save
+            Next
           </Button>
         </DialogFooter>
       </DialogContent>
+      <DateSettingsDialog
+        open={showDateDialog}
+        onOpenChange={setShowDateDialog}
+        task={task}
+        onSubmit={handleDateSubmit}
+        onBack={handleBackToMain}
+      />
     </Dialog>
   );
 }
