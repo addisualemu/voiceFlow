@@ -21,6 +21,7 @@ import {
   Archive,
   LogOut,
   FolderKanban,
+  Settings,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -35,6 +36,7 @@ const navItems = [
   { href: '/project', label: 'Project', icon: FolderKanban },
   { href: '/reference', label: 'Reference', icon: Book },
   { href: '/archive', label: 'Archive', icon: Archive },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 function Nav() {

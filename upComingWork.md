@@ -1,12 +1,12 @@
-select good place for the alert after new entry
 
-edit should edit the description and title
-setting for context and others
-import export data
 priority algorithm
-
+edit should edit the description and title
+import export data
+setting for context and others
 
 DONE +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+select good place for the alert after new entry
 
 Work on transition 
 - transiton from stage to satgae should show popup on what to do or describ or set alame
