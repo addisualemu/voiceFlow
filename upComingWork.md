@@ -1,9 +1,14 @@
-
+Widget: https://www.youtube.com/watch?v=00VwmqqXDik&t=568s
+time frame shuldnt require all fileds
+End of record should navigate to Entry
+It is not able to clear context and time and days
+config dialog need to have save in each page.
+minimum time required should be added as config.
 priority algorithm
-edit should edit the description and title
- export data
-
 DONE +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+actionable should not include the ones on the current
+edit should edit the description and title
+
 
 setting for context and others
 select good place for the alert after new entry
@@ -28,4 +33,4 @@ exit shoud come when edit context menu clickd.
 
 
 
-default page should be My day: not Entry  -- add new should move it to entry
+default page should be Actionable: not Entry  -- add new should move it to entry

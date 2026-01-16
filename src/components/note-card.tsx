@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { MoreVertical, Trash2, Edit, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
+import { MoreVertical, Trash2, Edit, ChevronDown, ChevronUp, Settings2, Clock, MapPin, Calendar, Flag } from 'lucide-react';
 import type { Task, Stage } from "@/lib/types";
 import { STAGES, STAGE_LABELS } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -38,14 +38,21 @@ const STAGE_TRANSITIONS: Record<Stage, Stage[]> = {
   Actionable: [],
 };
 
+interface TaskMatches {
+  timeFrame?: boolean;
+  context?: boolean;
+  daysOfWeek?: boolean;
+}
+
 interface TaskCardProps {
   task: Task;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
   showCheckbox?: boolean;
+  matches?: TaskMatches;
 }
 
-export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true }: TaskCardProps) {
+export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true, matches }: TaskCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showActionableDialog, setShowActionableDialog] = useState(false);
   const [showDateDialog, setShowDateDialog] = useState(false);
@@ -101,6 +108,27 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
   
   const [title, ...details] = task.detail.split('\n');
 
+  // Get priority icon styling
+  const getPriorityIcon = () => {
+    if (!task.priority || task.priority === 2) return null; // Don't show for Normal (default)
+    
+    const priorityConfig = {
+      1: { color: 'text-muted-foreground/40', title: 'Low' },
+      3: { color: 'text-orange-500/50', title: 'High' },
+      4: { color: 'text-red-500/50', title: 'Urgent' },
+    };
+    
+    const config = priorityConfig[task.priority as keyof typeof priorityConfig];
+    if (!config) return null;
+    
+    return (
+      <Flag 
+        className={cn("h-3 w-3 flex-shrink-0", config.color)} 
+        aria-label={`Priority: ${config.title}`}
+      />
+    );
+  };
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className={cn("w-full transition-all hover:shadow-md overflow-hidden", task.completed && "bg-muted/50")}>
@@ -114,22 +142,46 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
                 aria-label="Mark task as complete"
               />
             )}
-            <CollapsibleTrigger asChild>
-              <div className={cn("flex-grow cursor-pointer overflow-hidden min-w-0", !showCheckbox && 'ml-4')}>
-                {!isOpen && title.length > 0 && (
-                  <p className={cn("text-sm font-medium leading-none whitespace-normal break-all", task.completed && "line-through text-muted-foreground")}>
-                    {title.substring(0, 60)}{title.length > 60 ? '...' : ''}
-                  </p>
-            
-                )}
-                {isOpen && title.length > 0 && (
-                  <p className={cn("text-sm font-medium leading-none whitespace-normal break-all", task.completed && "line-through text-muted-foreground")}>
-                    {title}
-                  </p>
-            
-                )}
-              </div>
-            </CollapsibleTrigger>
+            <div className={cn("flex-grow overflow-hidden min-w-0 flex items-center gap-1.5", !showCheckbox && 'ml-4')}>
+              {getPriorityIcon()}
+              <CollapsibleTrigger asChild>
+                <div className="cursor-pointer overflow-hidden min-w-0 flex-1">
+                  {!isOpen && title.length > 0 && (
+                    <p className={cn("text-sm font-medium leading-none whitespace-normal break-all", task.completed && "line-through text-muted-foreground")}>
+                      {title.substring(0, 35)}{title.length > 35 ? '...' : ''}
+                    </p>
+              
+                  )}
+                  {isOpen && title.length > 0 && (
+                    <p className={cn("text-sm font-medium leading-none whitespace-normal break-all", task.completed && "line-through text-muted-foreground")}>
+                      {title}
+                    </p>
+              
+                  )}
+                </div>
+              </CollapsibleTrigger>
+            </div>
+
+             {/* Match Badges - Icon Only */}
+             {matches && (matches.timeFrame || matches.context || matches.daysOfWeek) && (
+                        <div className="flex flex-wrap gap-1.5 mb-1">
+                            {matches.timeFrame && (
+                                <div className="flex items-center justify-center h-5 w-5 rounded-full bg-secondary/50" title="Scheduled">
+                                    <Clock className="h-3 w-3 text-muted-foreground/60" />
+                                </div>
+                            )}
+                            {matches.context && (
+                                <div className="flex items-center justify-center h-5 w-5 rounded-full bg-secondary/50" title="Context">
+                                    <MapPin className="h-3 w-3 text-muted-foreground/60" />
+                                </div>
+                            )}
+                            {matches.daysOfWeek && (
+                                <div className="flex items-center justify-center h-5 w-5 rounded-full bg-secondary/50" title="Recurring">
+                                    <Calendar className="h-3 w-3 text-muted-foreground/60" />
+                                </div>
+                            )}
+                        </div>
+                    )}
              <AlertDialog>
                 <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                     <DropdownMenuTrigger asChild>
@@ -189,6 +241,7 @@ export default function TaskCard({ task, onUpdate, onDelete, showCheckbox = true
             <CardContent className="px-12 py-2 break-words">
                 {details.length > 0 && <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-2">{details.join('\n')}</p>}
                 <div className="flex flex-col gap-2">
+                   
                     <div className="flex flex-wrap gap-1.5">
                         {STAGE_TRANSITIONS[task.stage].map(stage => (
                             <Button

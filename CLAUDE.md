@@ -28,7 +28,7 @@ npm run genkit:watch # Start Genkit with file watching
 ### Application Structure (Next.js App Router)
 
 **Route Organization:**
-- `/` - "My Day" view (actionable tasks)
+- `/` - "Actionable" view (actionable tasks)
 - `/login` - Google OAuth authentication
 - `/entry` - Unprocessed inbox tasks
 - `/incubate` - Tasks on hold/blocked

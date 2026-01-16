@@ -30,7 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 
 const navItems = [
-  { href: '/', label: 'My Day', icon: LayoutDashboard },
+  { href: '/', label: 'Actionable', icon: LayoutDashboard },
   { href: '/entry', label: 'Entry', icon: Inbox },
   { href: '/incubate', label: 'Incubate', icon: Hourglass },
   { href: '/project', label: 'Project', icon: FolderKanban },
